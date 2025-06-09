@@ -1,0 +1,14 @@
+.App {
+  text-align: center;
+}
+
+/* Custom styles for our finance app */
+.ant-layout-header {
+  position: fixed;
+  z-index: 1;
+  width: 100%;
+}
+
+.ant-layout {
+  margin-top: 64px;
+}
