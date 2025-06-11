@@ -12,9 +12,10 @@ const api = axios.create({
 export interface Transaction {
   id: number;
   description: string;
-  currency_id: number;
+  currency_name: string;  // Changed from currency_code
   date: string;
   amount: number;
+  accounts: string;
 }
 
 export interface Account {

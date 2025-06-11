@@ -24,19 +24,25 @@ def read_root():
 
 @app.get("/api/transactions")
 def get_transactions():
-    """Get all transactions"""
+    """Get all transactions with better formatting"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT t.id, t.description, t.currency_id, 
-                   MIN(tl.date) as date,
-                   SUM(IFNULL(tl.debit, 0)) as amount
+            SELECT 
+                t.id, 
+                t.description, 
+                c.name as currency_name,
+                MIN(tl.date) as date,
+                SUM(CASE WHEN tl.debit IS NOT NULL THEN tl.debit ELSE -tl.credit END) as amount,
+                GROUP_CONCAT(DISTINCT a.name) as accounts
             FROM transactions t
             JOIN transaction_lines tl ON t.id = tl.transaction_id
-            GROUP BY t.id
+            LEFT JOIN currency c ON t.currency_id = c.id
+            LEFT JOIN accounts a ON tl.account_id = a.id
+            GROUP BY t.id, t.description, c.name
             ORDER BY date DESC
-            LIMIT 50
+            LIMIT 100
         """)
         
         transactions = []
@@ -44,9 +50,10 @@ def get_transactions():
             transactions.append({
                 "id": row[0],
                 "description": row[1],
-                "currency_id": row[2],
+                "currency_name": row[2] or "USD",
                 "date": row[3],
-                "amount": row[4]
+                "amount": float(row[4]) if row[4] else 0.0,
+                "accounts": row[5] or "Unknown"
             })
         
         conn.close()

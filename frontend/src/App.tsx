@@ -1,6 +1,7 @@
 import React from 'react';
 import { Layout, Menu, Typography } from 'antd';
 import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined } from '@ant-design/icons';
+import TransactionTable from './components/TransactionTable';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -60,7 +61,7 @@ function App() {
           </div>
         );
       case 'transactions':
-        return <Title level={2}>Transactions - Coming Soon!</Title>;
+        return <TransactionTable />;
       case 'accounts':
         return <Title level={2}>Accounts - Coming Soon!</Title>;
       case 'settings':
