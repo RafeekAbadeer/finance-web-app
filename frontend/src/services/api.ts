@@ -9,13 +9,36 @@ const api = axios.create({
   },
 });
 
+export interface TransactionLine {
+  id: number;
+  transaction_id: number;
+  account_name: string;
+  debit: number | null;
+  credit: number | null;
+  date: string;
+  classification_name: string | null;
+}
+
 export interface Transaction {
   id: number;
   description: string;
-  currency_name: string;  // Changed from currency_code
+  currency_name: string;
   date: string;
   amount: number;
   accounts: string;
+  total_debit: number;
+  total_credit: number;
+  line_count: number;
+}
+
+export interface TransactionLine {
+  id: number;
+  transaction_id: number;
+  account_name: string;
+  debit: number | null;
+  credit: number | null;
+  date: string;
+  classification_name: string | null;
 }
 
 export interface Account {
@@ -38,6 +61,12 @@ export const apiService = {
   getAccounts: async (): Promise<Account[]> => {
     const response = await api.get('/api/accounts');
     return response.data.accounts;
+  },
+
+  // Get transaction lines for a specific transaction
+  getTransactionLines: async (transactionId: number): Promise<TransactionLine[]> => {
+    const response = await api.get(`/api/transactions/${transactionId}/lines`);
+    return response.data.lines;
   },
 
   // Test API connection

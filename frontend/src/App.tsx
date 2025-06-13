@@ -2,6 +2,7 @@ import React from 'react';
 import { Layout, Menu, Typography } from 'antd';
 import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined } from '@ant-design/icons';
 import TransactionTable from './components/TransactionTable';
+import TransactionMasterDetail from './components/TransactionTable';
 import './App.css';
 
 const { Header, Sider, Content } = Layout;
@@ -61,7 +62,7 @@ function App() {
           </div>
         );
       case 'transactions':
-        return <TransactionTable />;
+        return <TransactionMasterDetail />;
       case 'accounts':
         return <Title level={2}>Accounts - Coming Soon!</Title>;
       case 'settings':
@@ -77,7 +78,7 @@ function App() {
         <Title level={3} style={{ color: 'white', margin: '16px 0' }}>
           Finance Manager
         </Title>
-      </Header>
+      </Header>    
       <Layout>
         <Sider width={200} style={{ background: '#fff' }}>
           <Menu
@@ -88,10 +89,10 @@ function App() {
             items={menuItems}
           />
         </Sider>
-        <Layout style={{ padding: '24px' }}>
+        <Layout style={{ padding: '0 0 0 16px' }}> {/* Add left padding for gap between sidebar and content */}
           <Content
             style={{
-              padding: 24,
+              padding: 16, /* Restore padding for internal content */
               margin: 0,
               minHeight: 280,
               background: '#fff',
@@ -102,6 +103,7 @@ function App() {
           </Content>
         </Layout>
       </Layout>
+
     </Layout>
   );
 }
