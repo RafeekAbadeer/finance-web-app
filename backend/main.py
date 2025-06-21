@@ -154,3 +154,73 @@ def get_accounts():
         return {"accounts": result}
     except Exception as e:
         return {"error": str(e)}
+
+@app.post("/api/transactions")
+def create_transaction(transaction_data: dict):
+    """Create a new transaction with its lines"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Insert transaction
+        cursor.execute("""
+            INSERT INTO transactions (description, currency_id)
+            VALUES (?, ?)
+        """, (transaction_data['description'], transaction_data['currency_id']))
+        
+        transaction_id = cursor.lastrowid
+        
+        # Insert transaction lines
+        for line in transaction_data['lines']:
+            cursor.execute("""
+                INSERT INTO transaction_lines (transaction_id, account_id, debit, credit, date, classification_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (transaction_id, line['account_id'], line.get('debit'), line.get('credit'), 
+                  line['date'], line.get('classification_id')))
+        
+        conn.commit()
+        conn.close()
+        return {"message": "Transaction created successfully", "id": transaction_id}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/currencies")
+def get_currencies():
+    """Get all currencies"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name, exchange_rate FROM currency")
+        
+        currencies = []
+        for row in cursor.fetchall():
+            currencies.append({
+                "id": row[0],
+                "name": row[1],
+                "exchange_rate": float(row[2]) if row[2] else 1.0
+            })
+        
+        conn.close()
+        return {"currencies": currencies}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/classifications")
+def get_classifications():
+    """Get all classifications"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, name FROM classifications")
+        
+        classifications = []
+        for row in cursor.fetchall():
+            classifications.append({
+                "id": row[0],
+                "name": row[1]
+            })
+        
+        conn.close()
+        return {"classifications": classifications}
+    except Exception as e:
+        return {"error": str(e)}

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Card, Typography, Tag, message } from 'antd';
-import { apiService, Transaction, TransactionLine } from '../services/api';
+import { Table, Card, Typography, Tag, message, Button, Modal, Form, Input, Select, InputNumber, 
+  DatePicker, Space } from 'antd';
+import { apiService, Transaction, TransactionLine, Account, Currency, Classification, 
+  TransactionFormData } from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
+import { PlusOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
 const { Title } = Typography;
 
@@ -11,9 +15,16 @@ const TransactionMasterDetail: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [loading, setLoading] = useState(false);
   const [linesLoading, setLinesLoading] = useState(false);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
+  const [classifications, setClassifications] = useState<Classification[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
+  const [linesGenerated, setLinesGenerated] = useState(false);
 
   useEffect(() => {
     loadTransactions();
+    loadSupportingData();
   }, []);
 
   const loadTransactions = async () => {
@@ -153,6 +164,147 @@ const TransactionMasterDetail: React.FC = () => {
   const topTableHeight = selectedTransaction ? '55%' : '100%';
   const bottomTableHeight = '40%';
 
+  const loadSupportingData = async () => {
+    try {
+      const [currenciesData, classificationsData, accountsData] = await Promise.all([
+        apiService.getCurrencies(),
+        apiService.getClassifications(),
+        apiService.getAccounts()
+      ]);
+      setCurrencies(currenciesData);
+      setClassifications(classificationsData);
+      setAccounts(accountsData);
+    } catch (error) {
+      message.error('Failed to load supporting data');
+      console.error('Error loading supporting data:', error);
+    }
+  };
+
+  const handleAdd = () => {
+    form.resetFields();
+    setFormValues({});
+    setLinesGenerated(false); // Reset lines generated state
+    setIsModalVisible(true);
+  };
+
+
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      // Validate transaction lines
+      if (!values.lines || values.lines.length < 2) {
+        message.error('Transaction must have at least 2 lines');
+        return;
+      }
+      
+      // Calculate totals and validate balance
+      const balance = calculateBalance(values.lines);
+      
+      if (!balance.isBalanced) {
+        message.error(`Transaction is not balanced! Debit: ${balance.totalDebit.toFixed(2)}, Credit: ${balance.totalCredit.toFixed(2)}`);
+        return;
+      }
+      
+      if (balance.totalDebit === 0) {
+        message.error('Transaction amount cannot be zero');
+        return;
+      }
+      
+      // Validate each line has either debit or credit (not both, not neither)
+      for (let i = 0; i < values.lines.length; i++) {
+        const line = values.lines[i];
+        const hasDebit = line.debit && line.debit > 0;
+        const hasCredit = line.credit && line.credit > 0;
+        
+        if (!hasDebit && !hasCredit) {
+          message.error(`Line ${i + 1}: Must have either a debit or credit amount`);
+          return;
+        }
+        
+        if (!line.account_id) {
+          message.error(`Line ${i + 1}: Must select an account`);
+          return;
+        }
+      }
+      
+      const transactionData: TransactionFormData = {
+        description: values.description,
+        currency_id: values.currency_id,
+        lines: values.lines.map((line: any) => ({
+          account_id: line.account_id,
+          debit: line.debit || null,
+          credit: line.credit || null,
+          date: line.date.format('YYYY-MM-DD'),
+          classification_id: line.classification_id || null
+        }))
+      };
+
+      await apiService.createTransaction(transactionData);
+      message.success('Transaction created successfully');
+      setIsModalVisible(false);
+      form.resetFields();
+      setFormValues({});
+      setLinesGenerated(false);
+      loadTransactions();
+    } catch (error) {
+      message.error('Failed to save transaction');
+      console.error('Error saving transaction:', error);
+    }
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+    form.resetFields();
+    setFormValues({});
+    setLinesGenerated(false); // Reset lines generated state
+  };
+
+  const [formValues, setFormValues] = useState<any>({});
+
+  // Helper function to calculate balance
+  const calculateBalance = (lines: any[] = []) => {
+    const totalDebit = lines.reduce((sum, line) => sum + (line?.debit || 0), 0);
+    const totalCredit = lines.reduce((sum, line) => sum + (line?.credit || 0), 0);
+    return { totalDebit, totalCredit, isBalanced: totalDebit === totalCredit && totalDebit > 0 };
+  };
+
+  //Handle form value changes (but don't auto-generate lines)
+  const handleFormChange = (changedValues: any, allValues: any) => {
+    // Only update formValues, don't auto-generate anything
+    setFormValues(allValues);
+  };
+
+  // Custom validation for debit/credit mutual exclusion
+  const validateDebitCredit = (_: any, value: any, callback: any) => {
+    const fieldName = _.field;
+    const lineIndex = fieldName.split('.')[1]; // Extract line index
+    const isDebit = fieldName.includes('debit');
+    
+    const currentLines = form.getFieldValue('lines') || [];
+    const currentLine = currentLines[lineIndex];
+    
+    if (value && value > 0) {
+      // If entering debit, clear credit and vice versa
+      if (isDebit && currentLine?.credit) {
+        form.setFieldValue(['lines', lineIndex, 'credit'], undefined);
+      } else if (!isDebit && currentLine?.debit) {
+        form.setFieldValue(['lines', lineIndex, 'debit'], undefined);
+      }
+    }
+    
+    callback();
+  };
+
+  // Get classifications available for a specific account
+  const getClassificationsForAccount = (accountId: number) => {
+    if (!accountId) return classifications;
+    
+    // For now, return all classifications
+    // Later you can implement account-specific filtering based on your database logic
+    return classifications;
+  };
+
   return (
     <div style={{ 
       height: 'calc(100vh - 120px)', 
@@ -248,6 +400,261 @@ const TransactionMasterDetail: React.FC = () => {
           />
         </Card>
       )}
+      {/* Add Transaction Button */}
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        onClick={handleAdd}
+        style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}
+      >
+        Add Transaction
+      </Button>
+      {/* Smart Transaction Form Modal */}
+      <Modal
+        title="Add Transaction"
+        open={isModalVisible}
+        onOk={handleModalOk}
+        onCancel={handleModalCancel}
+        width={1000}
+        okText="Save Transaction"
+        cancelText="Cancel"
+      >
+        <Form form={form} layout="vertical" onValuesChange={handleFormChange}>
+          {/* Stage 1: Transaction Setup */}
+          <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+            <h4 style={{ margin: '0 0 12px 0' }}>Transaction Details</h4>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <Form.Item
+                name="description"
+                label="Description"
+                rules={[{ required: true, message: 'Please enter description' }]}
+                style={{ flex: 2 }}
+              >
+                <Input placeholder="Transaction description" />
+              </Form.Item>
+
+              <Form.Item
+                name="default_date"
+                label="Date"
+                rules={[{ required: true, message: 'Please select date' }]}
+                style={{ flex: 1 }}
+              >
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+
+              <Form.Item
+                name="default_amount"
+                label="Amount"
+                rules={[{ required: true, message: 'Please enter amount' }]}
+                style={{ flex: 1 }}
+              >
+                <InputNumber placeholder="0.00" style={{ width: '100%' }} />
+              </Form.Item>
+
+              <Form.Item
+                name="currency_id"
+                label="Currency"
+                rules={[{ required: true, message: 'Please select currency' }]}
+                style={{ flex: 1 }}
+              >
+                <Select placeholder="Select currency">
+                  {currencies.map(currency => (
+                    <Select.Option key={currency.id} value={currency.id}>
+                      {currency.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </div>
+            
+            {/* Generate Lines Button */}
+            <Button 
+              type="primary" 
+              onClick={() => {
+                const currentValues = form.getFieldsValue();
+                const amount = Number(currentValues.default_amount);
+                const date = currentValues.default_date;
+                const description = currentValues.description;
+                const currency = currentValues.currency_id;
+                
+                if (amount && date && description && currency) {
+                  const newLines = [
+                    { debit: amount, date: date },
+                    { credit: amount, date: date }
+                  ];
+                  
+                  form.setFieldsValue({ lines: newLines });
+                  setLinesGenerated(true);
+                  
+                  setTimeout(() => {
+                    setFormValues(form.getFieldsValue());
+                  }, 50);
+                } else {
+                  message.warning('Please fill all required fields first (Description, Date, Amount, Currency)');
+                }
+              }}
+              style={{ marginTop: 8 }}
+            >
+              Generate Transaction Lines
+            </Button>
+          </div>
+
+          {/* Stage 2: Transaction Lines (only show if lines exist) */}
+          {linesGenerated && form.getFieldValue('lines')?.length > 0 && (
+            <div>
+              <h4 style={{ margin: '0 0 12px 0' }}>Transaction Lines (Debit = Credit)</h4>
+              
+              {/* Balance Indicator */}
+              <div style={{ 
+                background: calculateBalance(formValues.lines).isBalanced ? '#f6ffed' : '#fff2f0',
+                border: `1px solid ${calculateBalance(formValues.lines).isBalanced ? '#b7eb8f' : '#ffccc7'}`,
+                borderRadius: 6,
+                padding: 12,
+                marginBottom: 16,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <strong>Balance Check:</strong>
+                  <span style={{ marginLeft: 16 }}>
+                    Debit: {calculateBalance(formValues.lines).totalDebit.toFixed(2)}
+                  </span>
+                  <span style={{ marginLeft: 16 }}>
+                    Credit: {calculateBalance(formValues.lines).totalCredit.toFixed(2)}
+                  </span>
+                </div>
+                <div style={{ 
+                  color: calculateBalance(formValues.lines).isBalanced ? '#52c41a' : '#ff4d4f',
+                  fontWeight: 'bold'
+                }}>
+                  {calculateBalance(formValues.lines).isBalanced ? '✓ Balanced' : '✗ Not Balanced'}
+                </div>
+              </div>
+
+              <Form.List name="lines">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map(({ key, name, ...restField }) => (
+                      <div key={key} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'end' }}>
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'account_id']}
+                          label="Account"
+                          rules={[{ required: true, message: 'Account required' }]}
+                          style={{ flex: 2 }}
+                        >
+                          <Select 
+                            placeholder="Select account"
+                            onChange={() => {
+                              // Clear classification when account changes
+                              form.setFieldValue(['lines', name, 'classification_id'], undefined);
+                            }}
+                          >
+                            {accounts.map(account => (
+                              <Select.Option key={account.id} value={account.id}>
+                                {account.name}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'debit']}
+                          label={<span style={{ color: '#cf1322', fontWeight: 'bold' }}>Debit</span>}
+                          style={{ flex: 1 }}
+                        >
+                          <InputNumber 
+                            placeholder="0.00" 
+                            style={{ 
+                              width: '100%',
+                              borderColor: '#ffccc7',
+                              backgroundColor: '#fff2f0'
+                            }}
+                            onChange={(value) => {
+                              if (value && value > 0) {
+                                form.setFieldValue(['lines', name, 'credit'], undefined);
+                              }
+                            }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'credit']}
+                          label={<span style={{ color: '#389e0d', fontWeight: 'bold' }}>Credit</span>}
+                          style={{ flex: 1 }}
+                        >
+                          <InputNumber 
+                            placeholder="0.00" 
+                            style={{ 
+                              width: '100%',
+                              borderColor: '#b7eb8f',
+                              backgroundColor: '#f6ffed'
+                            }}
+                            onChange={(value) => {
+                              if (value && value > 0) {
+                                form.setFieldValue(['lines', name, 'debit'], undefined);
+                              }
+                            }}
+                          />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'date']}
+                          label="Date"
+                          style={{ flex: 1 }}
+                        >
+                          <DatePicker style={{ width: '100%' }} />
+                        </Form.Item>
+
+                        <Form.Item
+                          {...restField}
+                          name={[name, 'classification_id']}
+                          label="Classification"
+                          style={{ flex: 1 }}
+                        >
+                          <Select 
+                            placeholder="Optional" 
+                            allowClear
+                            disabled={!form.getFieldValue(['lines', name, 'account_id'])}
+                            onFocus={() => {
+                              // Clear classification if account changed
+                              const selectedAccountId = form.getFieldValue(['lines', name, 'account_id']);
+                              if (!selectedAccountId) {
+                                form.setFieldValue(['lines', name, 'classification_id'], undefined);
+                              }
+                            }}
+                          >
+                            {classifications.map(classification => (
+                              <Select.Option key={classification.id} value={classification.id}>
+                                {classification.name}
+                              </Select.Option>
+                            ))}
+                          </Select>
+                        </Form.Item>
+
+                        {fields.length > 2 && (
+                          <Button type="text" onClick={() => remove(name)} style={{ marginBottom: 24 }}>
+                            Remove
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                    <Form.Item>
+                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                        Add Transaction Line
+                      </Button>
+                    </Form.Item>
+                  </>
+                )}
+              </Form.List>
+            </div>
+          )}
+        </Form>
+      </Modal>
     </div>
   );
 };

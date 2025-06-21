@@ -50,6 +50,29 @@ export interface Account {
   term: string;
 }
 
+export interface Currency {
+  id: number;
+  name: string;
+  exchange_rate: number;
+}
+
+export interface Classification {
+  id: number;
+  name: string;
+}
+
+export interface TransactionFormData {
+  description: string;
+  currency_id: number;
+  lines: {
+    account_id: number;
+    debit?: number;
+    credit?: number;
+    date: string;
+    classification_id?: number;
+  }[];
+}
+
 export const apiService = {
   // Get all transactions
   getTransactions: async (): Promise<Transaction[]> => {
@@ -73,5 +96,22 @@ export const apiService = {
   testConnection: async (): Promise<string> => {
     const response = await api.get('/');
     return response.data.message;
+  },
+    // Get all currencies
+  getCurrencies: async (): Promise<Currency[]> => {
+    const response = await api.get('/api/currencies');
+    return response.data.currencies;
+  },
+
+  // Get all classifications
+  getClassifications: async (): Promise<Classification[]> => {
+    const response = await api.get('/api/classifications');
+    return response.data.classifications;
+  },
+
+  // Create new transaction
+  createTransaction: async (transactionData: TransactionFormData): Promise<any> => {
+    const response = await api.post('/api/transactions', transactionData);
+    return response.data;
   },
 };
