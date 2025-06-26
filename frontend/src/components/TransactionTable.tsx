@@ -4,7 +4,7 @@ import { Table, Card, Typography, Tag, message, Button, Modal, Form, Input, Sele
 import { apiService, Transaction, TransactionLine, Account, Currency, Classification, 
   TransactionFormData } from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -21,6 +21,7 @@ const TransactionMasterDetail: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [linesGenerated, setLinesGenerated] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   useEffect(() => {
     loadTransactions();
@@ -109,6 +110,22 @@ const TransactionMasterDetail: React.FC = () => {
       width: 70, // Fits "Lines" header + reasonable line counts
       align: 'center',
     },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 80,
+      render: (_, record: Transaction) => (
+        <Button
+          type="text"
+          icon={<EditOutlined />}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleEdit(record);
+          }}
+          title="Edit Transaction"
+        />
+      ),
+    },
   ];
 
   // Optimized transaction lines table columns with full names
@@ -183,10 +200,10 @@ const TransactionMasterDetail: React.FC = () => {
   const handleAdd = () => {
     form.resetFields();
     setFormValues({});
-    setLinesGenerated(false); // Reset lines generated state
+    setLinesGenerated(false);
+    setEditingTransaction(null); // Clear editing state
     setIsModalVisible(true);
   };
-
 
   const handleModalOk = async () => {
     try {
@@ -240,16 +257,30 @@ const TransactionMasterDetail: React.FC = () => {
         }))
       };
 
-      await apiService.createTransaction(transactionData);
-      message.success('Transaction created successfully');
+      // Call appropriate API based on mode
+      if (editingTransaction) {
+        await apiService.updateTransaction(editingTransaction.id, transactionData);
+        message.success('Transaction updated successfully');
+        
+        // If the edited transaction is currently selected, refresh its lines
+        if (selectedTransaction && selectedTransaction.id === editingTransaction.id) {
+          await loadTransactionLines(editingTransaction.id);
+        }
+      } else {
+        await apiService.createTransaction(transactionData);
+        message.success('Transaction created successfully');
+      }
+
       setIsModalVisible(false);
       form.resetFields();
       setFormValues({});
       setLinesGenerated(false);
+      setEditingTransaction(null);
       loadTransactions();
     } catch (error) {
-      message.error('Failed to save transaction');
-      console.error('Error saving transaction:', error);
+      const action = editingTransaction ? 'update' : 'save';
+      message.error(`Failed to ${action} transaction`);
+      console.error(`Error ${action}ing transaction:`, error);
     }
   };
 
@@ -257,7 +288,64 @@ const TransactionMasterDetail: React.FC = () => {
     setIsModalVisible(false);
     form.resetFields();
     setFormValues({});
-    setLinesGenerated(false); // Reset lines generated state
+    setLinesGenerated(false);
+    setEditingTransaction(null); // Clear editing state
+  };
+
+  const handleEdit = async (transaction: Transaction) => {
+    try {
+      // Load transaction lines
+      const linesData = await apiService.getTransactionLines(transaction.id);
+      
+      // Find currency ID by name
+      const currencyId = currencies.find(c => c.name === transaction.currency_name)?.id;
+      
+      // Calculate default amount (total debit or credit)
+      const totalDebit = linesData.reduce((sum, line) => sum + (line.debit || 0), 0);
+      const totalCredit = linesData.reduce((sum, line) => sum + (line.credit || 0), 0);
+      const defaultAmount = Math.max(totalDebit, totalCredit);
+      
+      // Find earliest date
+      const dates = linesData.map(line => new Date(line.date));
+      const earliestDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      
+      // Prepare lines data
+      const formLines = linesData.map((line: TransactionLine) => {
+        // Find classification ID by name
+        const classificationId = line.classification_name ? 
+          classifications.find(c => c.name === line.classification_name)?.id : undefined;
+        
+        return {
+          account_id: accounts.find(a => a.name === line.account_name)?.id,
+          debit: line.debit,
+          credit: line.credit,
+          date: dayjs(line.date),
+          classification_id: classificationId
+        };
+      });
+      
+      // Set form values for editing
+      form.setFieldsValue({
+        description: transaction.description,
+        currency_id: currencyId,
+        default_amount: defaultAmount,
+        default_date: dayjs(earliestDate),
+        lines: formLines
+      });
+      
+      setEditingTransaction(transaction);
+      setLinesGenerated(true); // Show lines section immediately
+      setIsModalVisible(true);
+      
+      // Update form values state
+      setTimeout(() => {
+        setFormValues(form.getFieldsValue());
+      }, 100);
+      
+    } catch (error) {
+      message.error('Failed to load transaction details');
+      console.error('Error loading transaction:', error);
+    }
   };
 
   const [formValues, setFormValues] = useState<any>({});
@@ -411,7 +499,7 @@ const TransactionMasterDetail: React.FC = () => {
       </Button>
       {/* Smart Transaction Form Modal */}
       <Modal
-        title="Add Transaction"
+        title={editingTransaction ? "Edit Transaction" : "Add Transaction"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
@@ -466,7 +554,8 @@ const TransactionMasterDetail: React.FC = () => {
                 </Select>
               </Form.Item>
             </div>
-            
+
+
             {/* Generate Lines Button */}
             <Button 
               type="primary" 
@@ -494,8 +583,9 @@ const TransactionMasterDetail: React.FC = () => {
                 }
               }}
               style={{ marginTop: 8 }}
+              disabled={editingTransaction !== null} // Disable in edit mode
             >
-              Generate Transaction Lines
+              {editingTransaction ? 'Lines Already Loaded' : 'Generate Transaction Lines'}
             </Button>
           </div>
 

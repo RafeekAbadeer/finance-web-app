@@ -114,4 +114,11 @@ export const apiService = {
     const response = await api.post('/api/transactions', transactionData);
     return response.data;
   },
+
+  // Update existing transaction
+  updateTransaction: async (transactionId: number, transactionData: TransactionFormData): Promise<any> => {
+    const response = await api.put(`/api/transactions/${transactionId}`, transactionData);
+    return response.data;
+  },
+
 };

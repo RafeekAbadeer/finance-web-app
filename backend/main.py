@@ -184,6 +184,37 @@ def create_transaction(transaction_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+@app.put("/api/transactions/{transaction_id}")
+def update_transaction(transaction_id: int, transaction_data: dict):
+    """Update an existing transaction"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Update transaction
+        cursor.execute("""
+            UPDATE transactions 
+            SET description = ?, currency_id = ?
+            WHERE id = ?
+        """, (transaction_data['description'], transaction_data['currency_id'], transaction_id))
+        
+        # Delete existing lines
+        cursor.execute("DELETE FROM transaction_lines WHERE transaction_id = ?", (transaction_id,))
+        
+        # Insert new lines
+        for line in transaction_data['lines']:
+            cursor.execute("""
+                INSERT INTO transaction_lines (transaction_id, account_id, debit, credit, date, classification_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (transaction_id, line['account_id'], line.get('debit'), line.get('credit'), 
+                  line['date'], line.get('classification_id')))
+        
+        conn.commit()
+        conn.close()
+        return {"message": "Transaction updated successfully"}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/api/currencies")
 def get_currencies():
     """Get all currencies"""
