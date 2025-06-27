@@ -215,6 +215,25 @@ def update_transaction(transaction_id: int, transaction_data: dict):
     except Exception as e:
         return {"error": str(e)}
 
+@app.delete("/api/transactions/{transaction_id}")
+def delete_transaction(transaction_id: int):
+    """Delete a transaction and its lines"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Delete transaction lines first (foreign key constraint)
+        cursor.execute("DELETE FROM transaction_lines WHERE transaction_id = ?", (transaction_id,))
+        
+        # Delete transaction
+        cursor.execute("DELETE FROM transactions WHERE id = ?", (transaction_id,))
+        
+        conn.commit()
+        conn.close()
+        return {"message": "Transaction deleted successfully"}
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.get("/api/currencies")
 def get_currencies():
     """Get all currencies"""

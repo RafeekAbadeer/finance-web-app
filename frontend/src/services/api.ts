@@ -121,4 +121,10 @@ export const apiService = {
     return response.data;
   },
 
+  // Delete transaction
+  deleteTransaction: async (transactionId: number): Promise<any> => {
+    const response = await api.delete(`/api/transactions/${transactionId}`);
+    return response.data;
+  },
+
 };

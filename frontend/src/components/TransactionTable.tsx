@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Typography, Tag, message, Button, Modal, Form, Input, Select, InputNumber, 
-  DatePicker, Space } from 'antd';
+  DatePicker, Space, Popconfirm } from 'antd';
 import { apiService, Transaction, TransactionLine, Account, Currency, Classification, 
   TransactionFormData } from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -22,18 +22,32 @@ const TransactionMasterDetail: React.FC = () => {
   const [form] = Form.useForm();
   const [linesGenerated, setLinesGenerated] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 15,
+    total: 0,
+  });
 
   useEffect(() => {
-    loadTransactions();
+    loadTransactions(1, 15);
     loadSupportingData();
   }, []);
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (page: number = 1, pageSize: number = 15) => {
     setLoading(true);
     try {
-      const data = await apiService.getTransactions();
-      setTransactions(data);
-      message.success(`Loaded ${data.length} transactions`);
+      const skip = (page - 1) * pageSize;
+      const response = await fetch(`http://localhost:8000/api/transactions?skip=${skip}&limit=${pageSize}`);
+      const data = await response.json();
+      
+      setTransactions(data.transactions);
+      setPagination({
+        current: page,
+        pageSize: pageSize,
+        total: data.total,
+      });
+      
+      message.success(`Loaded ${data.transactions.length} transactions`);
     } catch (error) {
       message.error('Failed to load transactions');
       console.error('Error loading transactions:', error);
@@ -110,22 +124,44 @@ const TransactionMasterDetail: React.FC = () => {
       width: 70, // Fits "Lines" header + reasonable line counts
       align: 'center',
     },
+    
     {
       title: 'Actions',
       key: 'actions',
-      width: 80,
+      width: 120,
       render: (_, record: Transaction) => (
-        <Button
-          type="text"
-          icon={<EditOutlined />}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleEdit(record);
-          }}
-          title="Edit Transaction"
-        />
+        <Space size="small">
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(record);
+            }}
+            title="Edit Transaction"
+          />
+          <Popconfirm
+            title="Delete Transaction"
+            description="Are you sure you want to delete this transaction? This action cannot be undone."
+            onConfirm={(e) => {
+              e?.stopPropagation();
+              handleDelete(record.id);
+            }}
+            okText="Yes, Delete"
+            cancelText="Cancel"
+            okType="danger"
+          >
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
+              title="Delete Transaction"
+            />
+          </Popconfirm>
+        </Space>
       ),
-    },
+    }  
   ];
 
   // Optimized transaction lines table columns with full names
@@ -348,6 +384,25 @@ const TransactionMasterDetail: React.FC = () => {
     }
   };
 
+  const handleDelete = async (transactionId: number) => {
+    try {
+      await apiService.deleteTransaction(transactionId);
+      message.success('Transaction deleted successfully');
+      
+      // If the deleted transaction was currently selected, clear the selection
+      if (selectedTransaction && selectedTransaction.id === transactionId) {
+        setSelectedTransaction(null);
+        setTransactionLines([]);
+      }
+      
+      // Reload the transactions list
+      loadTransactions();
+    } catch (error) {
+      message.error('Failed to delete transaction');
+      console.error('Error deleting transaction:', error);
+    }
+  };
+
   const [formValues, setFormValues] = useState<any>({});
 
   // Helper function to calculate balance
@@ -402,7 +457,19 @@ const TransactionMasterDetail: React.FC = () => {
     }}>
       {/* Top - Transactions Table */}
       <Card 
-        title={<span style={{ fontSize: '16px', fontWeight: 'bold' }}>Transactions</span>}
+        title={
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Transactions</span>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAdd}
+              size="small"
+            >
+              Add Transaction
+            </Button>
+          </div>
+        }
         size="small"
         style={{ 
           height: topTableHeight,
@@ -415,8 +482,8 @@ const TransactionMasterDetail: React.FC = () => {
           overflow: 'hidden', 
           display: 'flex', 
           flexDirection: 'column',
-          padding: '12px', // Increased for better spacing
-          paddingBottom: '16px' // Extra bottom padding for pagination
+          padding: '12px',
+          paddingBottom: '24px' // More bottom padding for pagination
         }}
       >
         <Table
@@ -426,21 +493,27 @@ const TransactionMasterDetail: React.FC = () => {
           loading={loading}
           size="small"
           pagination={{
+            ...pagination,
             size: 'small',
-            pageSize: 15,
             showSizeChanger: true,
             pageSizeOptions: ['10', '15', '20', '25', '50'],
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} of ${total}`,
             style: { 
-              margin: '12px 0 0 0', // More space above pagination
+              margin: '12px 0 0 0',
               textAlign: 'center'
+            },
+            onChange: (page, pageSize) => {
+              loadTransactions(page, pageSize || 15);
+            },
+            onShowSizeChange: (current, size) => {
+              loadTransactions(1, size); // Reset to first page when changing page size
             }
           }}
           scroll={{ 
-            y: selectedTransaction ? 'calc(55vh - 200px)' : 'calc(100vh - 260px)', // More space for pagination
-            x: true // Enable horizontal scroll if needed
+            y: selectedTransaction ? 'calc(55vh - 240px)' : 'calc(100vh - 300px)', // More space for pagination
+            x: true
           }}
           onRow={(record) => ({
             onClick: () => handleTransactionClick(record),
@@ -488,15 +561,6 @@ const TransactionMasterDetail: React.FC = () => {
           />
         </Card>
       )}
-      {/* Add Transaction Button */}
-      <Button
-        type="primary"
-        icon={<PlusOutlined />}
-        onClick={handleAdd}
-        style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}
-      >
-        Add Transaction
-      </Button>
       {/* Smart Transaction Form Modal */}
       <Modal
         title={editingTransaction ? "Edit Transaction" : "Add Transaction"}
