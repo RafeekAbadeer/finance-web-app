@@ -41,15 +41,6 @@ export interface TransactionLine {
   classification_name: string | null;
 }
 
-export interface Account {
-  id: number;
-  name: string;
-  category: string;
-  currency: string;
-  nature: string;
-  term: string;
-}
-
 export interface Currency {
   id: number;
   name: string;
@@ -71,6 +62,48 @@ export interface TransactionFormData {
     date: string;
     classification_id?: number;
   }[];
+}
+
+export interface Account {
+  id: number;
+  name: string;
+  category_name: string;
+  currency_name: string;
+  nature: 'debit' | 'credit' | 'both';
+  term: 'short term' | 'medium term' | 'long term' | 'undefined';
+  is_credit_card: boolean;
+  credit_limit?: number;
+  close_day?: number;
+  due_day?: number;
+  classifications?: string[];
+}
+
+export interface AccountFormData {
+  name: string;
+  category_id: number;
+  currency_id: number;
+  nature: 'debit' | 'credit' | 'both';
+  term: 'short term' | 'medium term' | 'long term' | 'undefined';
+  is_credit_card: boolean;
+  credit_limit?: number;
+  close_day?: number;
+  due_day?: number;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface Currency {
+  id: number;
+  name: string;
+  exchange_rate: number;
+}
+
+export interface Classification {
+  id: number;
+  name: string;
 }
 
 export const apiService = {
@@ -125,6 +158,100 @@ export const apiService = {
   deleteTransaction: async (transactionId: number): Promise<any> => {
     const response = await api.delete(`/api/transactions/${transactionId}`);
     return response.data;
+  },
+
+  // Account CRUD methods
+  getAccountsDetailed: async (): Promise<Account[]> => {
+    const response = await api.get('/api/accounts/detailed');
+    return response.data.accounts;
+  },
+
+  createAccount: async (accountData: AccountFormData): Promise<Account> => {
+    const response = await api.post('/api/accounts', accountData);
+    return response.data.account;
+  },
+
+  updateAccount: async (accountId: number, accountData: AccountFormData): Promise<Account> => {
+    const response = await api.put(`/api/accounts/${accountId}`, accountData);
+    return response.data.account;
+  },
+
+  deleteAccount: async (accountId: number): Promise<void> => {
+    await api.delete(`/api/accounts/${accountId}`);
+  },
+
+  // Category CRUD methods
+  getCategories: async (): Promise<Category[]> => {
+    const response = await api.get('/api/categories');
+    return response.data.categories;
+  },
+
+  createCategory: async (categoryData: { name: string }): Promise<Category> => {
+    const response = await api.post('/api/categories', categoryData);
+    return response.data.category;
+  },
+
+  updateCategory: async (categoryId: number, categoryData: { name: string }): Promise<Category> => {
+    const response = await api.put(`/api/categories/${categoryId}`, categoryData);
+    return response.data.category;
+  },
+
+  deleteCategory: async (categoryId: number): Promise<void> => {
+    await api.delete(`/api/categories/${categoryId}`);
+  },
+
+  // Account-Classification linking
+  getAccountClassifications: async (accountId: number): Promise<Classification[]> => {
+    const response = await api.get(`/api/accounts/${accountId}/classifications`);
+    return response.data.classifications;
+  },
+
+  linkAccountClassification: async (accountId: number, classificationId: number): Promise<void> => {
+    await api.post(`/api/accounts/${accountId}/classifications/${classificationId}`);
+  },
+
+  unlinkAccountClassification: async (accountId: number, classificationId: number): Promise<void> => {
+    await api.delete(`/api/accounts/${accountId}/classifications/${classificationId}`);
+  },
+
+  // Currency CRUD methods
+  getCurrenciesDetailed: async (): Promise<Currency[]> => {
+    const response = await api.get('/api/currencies/detailed');
+    return response.data.currencies;
+  },
+
+  createCurrency: async (currencyData: { name: string; exchange_rate: number }): Promise<Currency> => {
+    const response = await api.post('/api/currencies', currencyData);
+    return response.data.currency;
+  },
+
+  updateCurrency: async (currencyId: number, currencyData: { name: string; exchange_rate: number }): Promise<Currency> => {
+    const response = await api.put(`/api/currencies/${currencyId}`, currencyData);
+    return response.data.currency;
+  },
+
+  deleteCurrency: async (currencyId: number): Promise<void> => {
+    await api.delete(`/api/currencies/${currencyId}`);
+  },
+
+  // Classification CRUD methods
+  getClassificationsDetailed: async (): Promise<Classification[]> => {
+    const response = await api.get('/api/classifications/detailed');
+    return response.data.classifications;
+  },
+
+  createClassification: async (classificationData: { name: string }): Promise<Classification> => {
+    const response = await api.post('/api/classifications', classificationData);
+    return response.data.classification;
+  },
+
+  updateClassification: async (classificationId: number, classificationData: { name: string }): Promise<Classification> => {
+    const response = await api.put(`/api/classifications/${classificationId}`, classificationData);
+    return response.data.classification;
+  },
+
+  deleteClassification: async (classificationId: number): Promise<void> => {
+    await api.delete(`/api/classifications/${classificationId}`);
   },
 
 };

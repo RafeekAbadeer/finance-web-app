@@ -727,7 +727,7 @@ const TransactionMasterDetail: React.FC = () => {
                               backgroundColor: '#fff2f0'
                             }}
                             onChange={(value) => {
-                              if (value && value > 0) {
+                              if (value && Number(value) > 0) {
                                 form.setFieldValue(['lines', name, 'credit'], undefined);
                               }
                             }}
@@ -748,7 +748,7 @@ const TransactionMasterDetail: React.FC = () => {
                               backgroundColor: '#f6ffed'
                             }}
                             onChange={(value) => {
-                              if (value && value > 0) {
+                              if (value && Number(value) > 0) {
                                 form.setFieldValue(['lines', name, 'debit'], undefined);
                               }
                             }}

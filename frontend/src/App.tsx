@@ -3,7 +3,9 @@ import { Layout, Menu, Typography } from 'antd';
 import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined } from '@ant-design/icons';
 import TransactionTable from './components/TransactionTable';
 import TransactionMasterDetail from './components/TransactionTable';
+import AccountsTable from './components/AccountsTable';
 import './App.css';
+
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -64,7 +66,7 @@ function App() {
       case 'transactions':
         return <TransactionMasterDetail />;
       case 'accounts':
-        return <Title level={2}>Accounts - Coming Soon!</Title>;
+        return <AccountsTable />;
       case 'settings':
         return <Title level={2}>Settings - Coming Soon!</Title>;
       default:
