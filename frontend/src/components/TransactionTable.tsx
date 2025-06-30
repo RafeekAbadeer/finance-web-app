@@ -6,6 +6,7 @@ import { apiService, Transaction, TransactionLine, Account, Currency, Classifica
 import type { ColumnsType } from 'antd/es/table';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 const { Title } = Typography;
 
@@ -449,117 +450,115 @@ const TransactionMasterDetail: React.FC = () => {
   };
 
   return (
-    <div style={{ 
-      height: 'calc(100vh - 120px)', 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: '8px' 
-    }}>
+    <PanelGroup direction="horizontal" style={{ height: 'calc(100vh - 120px)' }}>
       {/* Top - Transactions Table */}
-      <Card 
-        title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Transactions</span>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAdd}
-              size="small"
-            >
-              Add Transaction
-            </Button>
-          </div>
-        }
-        size="small"
-        style={{ 
-          height: topTableHeight,
-          display: 'flex', 
-          flexDirection: 'column',
-          transition: 'height 0.3s ease'
-        }}
-        bodyStyle={{ 
-          flex: 1, 
-          overflow: 'hidden', 
-          display: 'flex', 
-          flexDirection: 'column',
-          padding: '12px',
-          paddingBottom: '24px' // More bottom padding for pagination
-        }}
-      >
-        <Table
-          columns={transactionColumns}
-          dataSource={transactions}
-          rowKey="id"
-          loading={loading}
-          size="small"
-          pagination={{
-            ...pagination,
-            size: 'small',
-            showSizeChanger: true,
-            pageSizeOptions: ['10', '15', '20', '25', '50'],
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} of ${total}`,
-            style: { 
-              margin: '12px 0 0 0',
-              textAlign: 'center'
-            },
-            onChange: (page, pageSize) => {
-              loadTransactions(page, pageSize || 15);
-            },
-            onShowSizeChange: (current, size) => {
-              loadTransactions(1, size); // Reset to first page when changing page size
-            }
-          }}
-          scroll={{ 
-            y: selectedTransaction ? 'calc(55vh - 240px)' : 'calc(100vh - 300px)', // More space for pagination
-            x: true
-          }}
-          onRow={(record) => ({
-            onClick: () => handleTransactionClick(record),
-            style: { 
-              cursor: 'pointer',
-              backgroundColor: selectedTransaction?.id === record.id ? '#e6f7ff' : undefined
-            },
-          })}
-        />
-      </Card>
-
-      {/* Bottom - Transaction Lines */}
-      {selectedTransaction && (
+      <Panel defaultSize={60} minSize={40}>
         <Card 
           title={
-            <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
-              Lines: {selectedTransaction.description}
-            </span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Transactions</span>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={handleAdd}
+                size="small"
+              >
+                Add Transaction
+              </Button>
+            </div>
           }
           size="small"
           style={{ 
-            height: bottomTableHeight,
             display: 'flex', 
-            flexDirection: 'column'
+            flexDirection: 'column',
           }}
           bodyStyle={{ 
             flex: 1, 
             overflow: 'hidden', 
             display: 'flex', 
             flexDirection: 'column',
-            padding: '12px'
+            padding: '12px',
+            paddingBottom: '24px' // More bottom padding for pagination
           }}
         >
           <Table
-            columns={linesColumns}
-            dataSource={transactionLines}
+            columns={transactionColumns}
+            dataSource={transactions}
             rowKey="id"
-            loading={linesLoading}
-            pagination={false}
+            loading={loading}
             size="small"
+            pagination={{
+              ...pagination,
+              size: 'small',
+              showSizeChanger: true,
+              pageSizeOptions: ['10', '15', '20', '25', '50'],
+              showQuickJumper: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} of ${total}`,
+              style: { 
+                margin: '12px 0 0 0',
+                textAlign: 'center'
+              },
+              onChange: (page, pageSize) => {
+                loadTransactions(page, pageSize || 15);
+              },
+              onShowSizeChange: (current, size) => {
+                loadTransactions(1, size); // Reset to first page when changing page size
+              }
+            }}
             scroll={{ 
-              y: 'calc(40vh - 120px)',
+              y: 'calc(100vh - 300px)',
               x: true
             }}
+            onRow={(record) => ({
+              onClick: () => handleTransactionClick(record),
+              style: { 
+                cursor: 'pointer',
+                backgroundColor: selectedTransaction?.id === record.id ? '#e6f7ff' : undefined
+              },
+            })}
           />
         </Card>
+      </Panel>
+
+      <PanelResizeHandle style={{ width: '4px', background: '#d9d9d9' }} />
+
+      {/* Bottom - Transaction Lines */}
+      {selectedTransaction && (
+        <Panel defaultSize={40} minSize={25}>
+          <Card 
+            title={
+              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                Lines: {selectedTransaction.description}
+              </span>
+            }
+            size="small"
+            style={{ 
+              display: 'flex', 
+              flexDirection: 'column'
+            }}
+            bodyStyle={{ 
+              flex: 1, 
+              overflow: 'hidden', 
+              display: 'flex', 
+              flexDirection: 'column',
+              padding: '12px'
+            }}
+          >
+            <Table
+              columns={linesColumns}
+              dataSource={transactionLines}
+              rowKey="id"
+              loading={linesLoading}
+              pagination={false}
+              size="small"
+              scroll={{ 
+                y: 'calc(100vh - 300px)',
+                x: true
+              }}
+            />
+          </Card>
+        </Panel>
       )}
       {/* Smart Transaction Form Modal */}
       <Modal
@@ -809,7 +808,7 @@ const TransactionMasterDetail: React.FC = () => {
           )}
         </Form>
       </Modal>
-    </div>
+    </PanelGroup>
   );
 };
 
