@@ -67,8 +67,10 @@ export interface TransactionFormData {
 export interface Account {
   id: number;
   name: string;
-  category_name: string;
-  currency_name: string;
+  category: string;           // For TransactionTable grouping
+  category_name: string;      // For AccountsTable display  
+  currency: string;           // For TransactionTable
+  currency_name: string;      // For AccountsTable display
   nature: 'debit' | 'credit' | 'both';
   term: 'short term' | 'medium term' | 'long term' | 'undefined';
   is_credit_card: boolean;

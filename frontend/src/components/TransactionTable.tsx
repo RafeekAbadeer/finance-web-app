@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 const { Title } = Typography;
+const { OptGroup } = Select;
 
 const TransactionMasterDetail: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -449,6 +450,8 @@ const TransactionMasterDetail: React.FC = () => {
     return classifications;
   };
 
+  //console.log(accounts[0])
+
   return (
     <PanelGroup direction="horizontal" style={{ height: 'calc(100vh - 120px)' }}>
       {/* Top - Transactions Table */}
@@ -699,15 +702,31 @@ const TransactionMasterDetail: React.FC = () => {
                         >
                           <Select 
                             placeholder="Select account"
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
+                            }
                             onChange={() => {
                               // Clear classification when account changes
                               form.setFieldValue(['lines', name, 'classification_id'], undefined);
                             }}
                           >
-                            {accounts.map(account => (
-                              <Select.Option key={account.id} value={account.id}>
-                                {account.name}
-                              </Select.Option>
+                            {Object.entries(
+                              accounts.reduce((groups, account) => {
+                                const category = account.category || 'Other';
+                                if (!groups[category]) groups[category] = [];
+                                groups[category].push(account);
+                                return groups;
+                              }, {} as Record<string, typeof accounts>)
+                            ).map(([category, categoryAccounts]) => (
+                              <OptGroup key={category} label={category}>
+                                {categoryAccounts.map(account => (
+                                  <Select.Option key={account.id} value={account.id}>
+                                    {account.name}
+                                  </Select.Option>
+                                ))}
+                              </OptGroup>
                             ))}
                           </Select>
                         </Form.Item>
@@ -772,6 +791,11 @@ const TransactionMasterDetail: React.FC = () => {
                           <Select 
                             placeholder="Optional" 
                             allowClear
+                            showSearch
+                            optionFilterProp="children"
+                            filterOption={(input, option) =>
+                              (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
+                            }
                             disabled={!form.getFieldValue(['lines', name, 'account_id'])}
                             onFocus={() => {
                               // Clear classification if account changed
