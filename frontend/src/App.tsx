@@ -76,36 +76,46 @@ function App() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ padding: '0 24px', background: '#001529' }}>
-        <Title level={3} style={{ color: 'white', margin: '16px 0' }}>
+      <Header style={{ padding: '0 24px', background: '#001529', height: 64, lineHeight: '64px' }}>
+        <Title level={3} style={{ color: 'white', margin: 0, lineHeight: '64px' }}>
           Finance Manager
         </Title>
-      </Header>    
-      <Layout>
-        <Sider width={200} style={{ background: '#fff' }}>
+      </Header>
+      <Layout style={{ flex: 1, display: 'flex' }}>
+        <Sider
+          width={200}
+          style={{
+            background: '#fff',
+            border: '1px solid yellow',
+            paddingTop: 24,
+          }}
+        >
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
             onClick={({ key }) => setSelectedKey(key)}
-            style={{ height: '100%', borderRight: 0 }}
+            style={{ height: '100%', borderRight: 0, overflow: 'auto' }}
             items={menuItems}
           />
         </Sider>
-        <Layout style={{ padding: '0 0 0 16px' }}> {/* Add left padding for gap between sidebar and content */}
+        <Layout style={{ padding: '0 0 0 16px', flex: 1, display: 'flex' }}>
           <Content
             style={{
-              padding: 16, /* Restore padding for internal content */
+              padding: 0,
               margin: 0,
-              minHeight: 280,
+              minHeight: 0,
               background: '#fff',
               borderRadius: 8,
+              display: 'flex',
+              flexDirection: 'column',
+              flex: 1,
+              boxSizing: 'border-box',
             }}
           >
             {renderContent()}
           </Content>
         </Layout>
       </Layout>
-
     </Layout>
   );
 }

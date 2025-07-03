@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Card, Typography, Tag, message, Button, Modal, Form, Input, Select, InputNumber, 
-  DatePicker, Space, Popconfirm } from 'antd';
+  DatePicker, Space, Popconfirm, Menu, Layout } from 'antd';
 import { apiService, Transaction, TransactionLine, Account, Currency, Classification, 
   TransactionFormData } from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
@@ -453,37 +453,22 @@ const TransactionMasterDetail: React.FC = () => {
   //console.log(accounts[0])
 
   return (
-    <PanelGroup direction="horizontal" style={{ height: 'calc(100vh - 120px)' }}>
-      {/* Top - Transactions Table */}
-      <Panel defaultSize={60} minSize={40}>
-        <Card 
-          title={
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '16px', fontWeight: 'bold' }}>Transactions</span>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAdd}
-                size="small"
-              >
-                Add Transaction
-              </Button>
-            </div>
-          }
-          size="small"
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column',
-          }}
-          bodyStyle={{ 
-            flex: 1, 
-            overflow: 'hidden', 
-            display: 'flex', 
-            flexDirection: 'column',
-            padding: '12px',
-            paddingBottom: '24px' // More bottom padding for pagination
-          }}
+    <div style={{ padding: '24px', height: '100%', boxSizing: 'border-box', border: '1px solid green'  // Temporary - to see container bounds 
+      }}>
+      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', 
+        alignItems: 'center', flexShrink: 0, border: '1px solid orange' }}>
+        <Title level={2} style={{ margin: 0 }}>Transactions</Title>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={handleAdd}
         >
+          Add Transaction
+        </Button>
+      </div>
+      <PanelGroup direction="horizontal" style={{ height: '100%', flex: 1}}>
+        {/* Top - Transactions Table */}
+        <Panel defaultSize={60} minSize={40} style={{ padding: '0px' }}>
           <Table
             columns={transactionColumns}
             dataSource={transactions}
@@ -491,28 +476,21 @@ const TransactionMasterDetail: React.FC = () => {
             loading={loading}
             size="small"
             pagination={{
-              ...pagination,
-              size: 'small',
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
               showSizeChanger: true,
-              pageSizeOptions: ['10', '15', '20', '25', '50'],
               showQuickJumper: true,
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} of ${total}`,
-              style: { 
-                margin: '12px 0 0 0',
-                textAlign: 'center'
-              },
+              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} transactions`,
+              pageSizeOptions: ['5', '10', '15', '20'],
               onChange: (page, pageSize) => {
                 loadTransactions(page, pageSize || 15);
               },
               onShowSizeChange: (current, size) => {
-                loadTransactions(1, size); // Reset to first page when changing page size
+                loadTransactions(1, size);
               }
             }}
-            scroll={{ 
-              y: 'calc(100vh - 300px)',
-              x: true
-            }}
+            scroll={{ x: 800, y: 400 }}
             onRow={(record) => ({
               onClick: () => handleTransactionClick(record),
               style: { 
@@ -521,318 +499,315 @@ const TransactionMasterDetail: React.FC = () => {
               },
             })}
           />
-        </Card>
-      </Panel>
-
-      <PanelResizeHandle style={{ width: '4px', background: '#d9d9d9' }} />
-
-      {/* Bottom - Transaction Lines */}
-      {selectedTransaction && (
-        <Panel defaultSize={40} minSize={25}>
-          <Card 
-            title={
-              <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                Lines: {selectedTransaction.description}
-              </span>
-            }
-            size="small"
-            style={{ 
-              display: 'flex', 
-              flexDirection: 'column'
-            }}
-            bodyStyle={{ 
-              flex: 1, 
-              overflow: 'hidden', 
-              display: 'flex', 
-              flexDirection: 'column',
-              padding: '12px'
-            }}
-          >
-            <Table
-              columns={linesColumns}
-              dataSource={transactionLines}
-              rowKey="id"
-              loading={linesLoading}
-              pagination={false}
-              size="small"
-              scroll={{ 
-                y: 'calc(100vh - 300px)',
-                x: true
-              }}
-            />
-          </Card>
         </Panel>
-      )}
-      {/* Smart Transaction Form Modal */}
-      <Modal
-        title={editingTransaction ? "Edit Transaction" : "Add Transaction"}
-        open={isModalVisible}
-        onOk={handleModalOk}
-        onCancel={handleModalCancel}
-        width={1000}
-        okText="Save Transaction"
-        cancelText="Cancel"
-      >
-        <Form form={form} layout="vertical" onValuesChange={handleFormChange}>
-          {/* Stage 1: Transaction Setup */}
-          <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
-            <h4 style={{ margin: '0 0 12px 0' }}>Transaction Details</h4>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <Form.Item
-                name="description"
-                label="Description"
-                rules={[{ required: true, message: 'Please enter description' }]}
-                style={{ flex: 2 }}
-              >
-                <Input placeholder="Transaction description" />
-              </Form.Item>
 
-              <Form.Item
-                name="default_date"
-                label="Date"
-                rules={[{ required: true, message: 'Please select date' }]}
-                style={{ flex: 1 }}
-              >
-                <DatePicker style={{ width: '100%' }} />
-              </Form.Item>
+        <PanelResizeHandle style={{ width: '4px', background: '#d9d9d9' }} />
 
-              <Form.Item
-                name="default_amount"
-                label="Amount"
-                rules={[{ required: true, message: 'Please enter amount' }]}
-                style={{ flex: 1 }}
-              >
-                <InputNumber placeholder="0.00" style={{ width: '100%' }} />
-              </Form.Item>
-
-              <Form.Item
-                name="currency_id"
-                label="Currency"
-                rules={[{ required: true, message: 'Please select currency' }]}
-                style={{ flex: 1 }}
-              >
-                <Select placeholder="Select currency">
-                  {currencies.map(currency => (
-                    <Select.Option key={currency.id} value={currency.id}>
-                      {currency.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </div>
-
-
-            {/* Generate Lines Button */}
-            <Button 
-              type="primary" 
-              onClick={() => {
-                const currentValues = form.getFieldsValue();
-                const amount = Number(currentValues.default_amount);
-                const date = currentValues.default_date;
-                const description = currentValues.description;
-                const currency = currentValues.currency_id;
-                
-                if (amount && date && description && currency) {
-                  const newLines = [
-                    { debit: amount, date: date },
-                    { credit: amount, date: date }
-                  ];
-                  
-                  form.setFieldsValue({ lines: newLines });
-                  setLinesGenerated(true);
-                  
-                  setTimeout(() => {
-                    setFormValues(form.getFieldsValue());
-                  }, 50);
-                } else {
-                  message.warning('Please fill all required fields first (Description, Date, Amount, Currency)');
-                }
+        {/* Bottom - Transaction Lines */}
+        {selectedTransaction && (
+          <Panel defaultSize={40} minSize={25}>
+            <Card 
+              title={
+                <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                  Lines: {selectedTransaction.description}
+                </span>
+              }
+              size="small"
+              style={{ 
+                display: 'flex', 
+                flexDirection: 'column'
               }}
-              style={{ marginTop: 8 }}
-              disabled={editingTransaction !== null} // Disable in edit mode
+              bodyStyle={{ 
+                flex: 1, 
+                overflow: 'hidden', 
+                display: 'flex', 
+                flexDirection: 'column',
+                padding: '12px'
+              }}
             >
-              {editingTransaction ? 'Lines Already Loaded' : 'Generate Transaction Lines'}
-            </Button>
-          </div>
+              <Table
+                columns={linesColumns}
+                dataSource={transactionLines}
+                rowKey="id"
+                loading={linesLoading}
+                pagination={false}
+                size="small"
+                scroll={{ x: 600, y: 300 }}
+              />
+            </Card>
+          </Panel>
+        )}
+        {/* Smart Transaction Form Modal */}
+        <Modal
+          title={editingTransaction ? "Edit Transaction" : "Add Transaction"}
+          open={isModalVisible}
+          onOk={handleModalOk}
+          onCancel={handleModalCancel}
+          width={1000}
+          okText="Save Transaction"
+          cancelText="Cancel"
+        >
+          <Form form={form} layout="vertical" onValuesChange={handleFormChange}>
+            {/* Stage 1: Transaction Setup */}
+            <div style={{ background: '#f8f9fa', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+              <h4 style={{ margin: '0 0 12px 0' }}>Transaction Details</h4>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <Form.Item
+                  name="description"
+                  label="Description"
+                  rules={[{ required: true, message: 'Please enter description' }]}
+                  style={{ flex: 2 }}
+                >
+                  <Input placeholder="Transaction description" />
+                </Form.Item>
 
-          {/* Stage 2: Transaction Lines (only show if lines exist) */}
-          {linesGenerated && form.getFieldValue('lines')?.length > 0 && (
-            <div>
-              <h4 style={{ margin: '0 0 12px 0' }}>Transaction Lines (Debit = Credit)</h4>
-              
-              {/* Balance Indicator */}
-              <div style={{ 
-                background: calculateBalance(formValues.lines).isBalanced ? '#f6ffed' : '#fff2f0',
-                border: `1px solid ${calculateBalance(formValues.lines).isBalanced ? '#b7eb8f' : '#ffccc7'}`,
-                borderRadius: 6,
-                padding: 12,
-                marginBottom: 16,
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-                <div>
-                  <strong>Balance Check:</strong>
-                  <span style={{ marginLeft: 16 }}>
-                    Debit: {calculateBalance(formValues.lines).totalDebit.toFixed(2)}
-                  </span>
-                  <span style={{ marginLeft: 16 }}>
-                    Credit: {calculateBalance(formValues.lines).totalCredit.toFixed(2)}
-                  </span>
-                </div>
-                <div style={{ 
-                  color: calculateBalance(formValues.lines).isBalanced ? '#52c41a' : '#ff4d4f',
-                  fontWeight: 'bold'
-                }}>
-                  {calculateBalance(formValues.lines).isBalanced ? '✓ Balanced' : '✗ Not Balanced'}
-                </div>
+                <Form.Item
+                  name="default_date"
+                  label="Date"
+                  rules={[{ required: true, message: 'Please select date' }]}
+                  style={{ flex: 1 }}
+                >
+                  <DatePicker style={{ width: '100%' }} />
+                </Form.Item>
+
+                <Form.Item
+                  name="default_amount"
+                  label="Amount"
+                  rules={[{ required: true, message: 'Please enter amount' }]}
+                  style={{ flex: 1 }}
+                >
+                  <InputNumber placeholder="0.00" style={{ width: '100%' }} />
+                </Form.Item>
+
+                <Form.Item
+                  name="currency_id"
+                  label="Currency"
+                  rules={[{ required: true, message: 'Please select currency' }]}
+                  style={{ flex: 1 }}
+                >
+                  <Select placeholder="Select currency">
+                    {currencies.map(currency => (
+                      <Select.Option key={currency.id} value={currency.id}>
+                        {currency.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
               </div>
 
-              <Form.List name="lines">
-                {(fields, { add, remove }) => (
-                  <>
-                    {fields.map(({ key, name, ...restField }) => (
-                      <div key={key} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'end' }}>
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'account_id']}
-                          label="Account"
-                          rules={[{ required: true, message: 'Account required' }]}
-                          style={{ flex: 2 }}
-                        >
-                          <Select 
-                            placeholder="Select account"
-                            showSearch
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                              (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
-                            }
-                            onChange={() => {
-                              // Clear classification when account changes
-                              form.setFieldValue(['lines', name, 'classification_id'], undefined);
-                            }}
-                          >
-                            {Object.entries(
-                              accounts.reduce((groups, account) => {
-                                const category = account.category || 'Other';
-                                if (!groups[category]) groups[category] = [];
-                                groups[category].push(account);
-                                return groups;
-                              }, {} as Record<string, typeof accounts>)
-                            ).map(([category, categoryAccounts]) => (
-                              <OptGroup key={category} label={category}>
-                                {categoryAccounts.map(account => (
-                                  <Select.Option key={account.id} value={account.id}>
-                                    {account.name}
-                                  </Select.Option>
-                                ))}
-                              </OptGroup>
-                            ))}
-                          </Select>
-                        </Form.Item>
 
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'debit']}
-                          label={<span style={{ color: '#cf1322', fontWeight: 'bold' }}>Debit</span>}
-                          style={{ flex: 1 }}
-                        >
-                          <InputNumber 
-                            placeholder="0.00" 
-                            style={{ 
-                              width: '100%',
-                              borderColor: '#ffccc7',
-                              backgroundColor: '#fff2f0'
-                            }}
-                            onChange={(value) => {
-                              if (value && Number(value) > 0) {
-                                form.setFieldValue(['lines', name, 'credit'], undefined);
-                              }
-                            }}
-                          />
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'credit']}
-                          label={<span style={{ color: '#389e0d', fontWeight: 'bold' }}>Credit</span>}
-                          style={{ flex: 1 }}
-                        >
-                          <InputNumber 
-                            placeholder="0.00" 
-                            style={{ 
-                              width: '100%',
-                              borderColor: '#b7eb8f',
-                              backgroundColor: '#f6ffed'
-                            }}
-                            onChange={(value) => {
-                              if (value && Number(value) > 0) {
-                                form.setFieldValue(['lines', name, 'debit'], undefined);
-                              }
-                            }}
-                          />
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'date']}
-                          label="Date"
-                          style={{ flex: 1 }}
-                        >
-                          <DatePicker style={{ width: '100%' }} />
-                        </Form.Item>
-
-                        <Form.Item
-                          {...restField}
-                          name={[name, 'classification_id']}
-                          label="Classification"
-                          style={{ flex: 1 }}
-                        >
-                          <Select 
-                            placeholder="Optional" 
-                            allowClear
-                            showSearch
-                            optionFilterProp="children"
-                            filterOption={(input, option) =>
-                              (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
-                            }
-                            disabled={!form.getFieldValue(['lines', name, 'account_id'])}
-                            onFocus={() => {
-                              // Clear classification if account changed
-                              const selectedAccountId = form.getFieldValue(['lines', name, 'account_id']);
-                              if (!selectedAccountId) {
-                                form.setFieldValue(['lines', name, 'classification_id'], undefined);
-                              }
-                            }}
-                          >
-                            {classifications.map(classification => (
-                              <Select.Option key={classification.id} value={classification.id}>
-                                {classification.name}
-                              </Select.Option>
-                            ))}
-                          </Select>
-                        </Form.Item>
-
-                        {fields.length > 2 && (
-                          <Button type="text" onClick={() => remove(name)} style={{ marginBottom: 24 }}>
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                    ))}
-                    <Form.Item>
-                      <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
-                        Add Transaction Line
-                      </Button>
-                    </Form.Item>
-                  </>
-                )}
-              </Form.List>
+              {/* Generate Lines Button */}
+              <Button 
+                type="primary" 
+                onClick={() => {
+                  const currentValues = form.getFieldsValue();
+                  const amount = Number(currentValues.default_amount);
+                  const date = currentValues.default_date;
+                  const description = currentValues.description;
+                  const currency = currentValues.currency_id;
+                  
+                  if (amount && date && description && currency) {
+                    const newLines = [
+                      { debit: amount, date: date },
+                      { credit: amount, date: date }
+                    ];
+                    
+                    form.setFieldsValue({ lines: newLines });
+                    setLinesGenerated(true);
+                    
+                    setTimeout(() => {
+                      setFormValues(form.getFieldsValue());
+                    }, 50);
+                  } else {
+                    message.warning('Please fill all required fields first (Description, Date, Amount, Currency)');
+                  }
+                }}
+                style={{ marginTop: 8 }}
+                disabled={editingTransaction !== null} // Disable in edit mode
+              >
+                {editingTransaction ? 'Lines Already Loaded' : 'Generate Transaction Lines'}
+              </Button>
             </div>
-          )}
-        </Form>
-      </Modal>
-    </PanelGroup>
+
+            {/* Stage 2: Transaction Lines (only show if lines exist) */}
+            {linesGenerated && form.getFieldValue('lines')?.length > 0 && (
+              <div>
+                <h4 style={{ margin: '0 0 12px 0' }}>Transaction Lines (Debit = Credit)</h4>
+                
+                {/* Balance Indicator */}
+                <div style={{ 
+                  background: calculateBalance(formValues.lines).isBalanced ? '#f6ffed' : '#fff2f0',
+                  border: `1px solid ${calculateBalance(formValues.lines).isBalanced ? '#b7eb8f' : '#ffccc7'}`,
+                  borderRadius: 6,
+                  padding: 12,
+                  marginBottom: 16,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div>
+                    <strong>Balance Check:</strong>
+                    <span style={{ marginLeft: 16 }}>
+                      Debit: {calculateBalance(formValues.lines).totalDebit.toFixed(2)}
+                    </span>
+                    <span style={{ marginLeft: 16 }}>
+                      Credit: {calculateBalance(formValues.lines).totalCredit.toFixed(2)}
+                    </span>
+                  </div>
+                  <div style={{ 
+                    color: calculateBalance(formValues.lines).isBalanced ? '#52c41a' : '#ff4d4f',
+                    fontWeight: 'bold'
+                  }}>
+                    {calculateBalance(formValues.lines).isBalanced ? '✓ Balanced' : '✗ Not Balanced'}
+                  </div>
+                </div>
+
+                <Form.List name="lines">
+                  {(fields, { add, remove }) => (
+                    <>
+                      {fields.map(({ key, name, ...restField }) => (
+                        <div key={key} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'end' }}>
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'account_id']}
+                            label="Account"
+                            rules={[{ required: true, message: 'Account required' }]}
+                            style={{ flex: 2 }}
+                          >
+                            <Select 
+                              placeholder="Select account"
+                              showSearch
+                              optionFilterProp="children"
+                              filterOption={(input, option) =>
+                                (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
+                              }
+                              onChange={() => {
+                                // Clear classification when account changes
+                                form.setFieldValue(['lines', name, 'classification_id'], undefined);
+                              }}
+                            >
+                              {Object.entries(
+                                accounts.reduce((groups, account) => {
+                                  const category = account.category || 'Other';
+                                  if (!groups[category]) groups[category] = [];
+                                  groups[category].push(account);
+                                  return groups;
+                                }, {} as Record<string, typeof accounts>)
+                              ).map(([category, categoryAccounts]) => (
+                                <OptGroup key={category} label={category}>
+                                  {categoryAccounts.map(account => (
+                                    <Select.Option key={account.id} value={account.id}>
+                                      {account.name}
+                                    </Select.Option>
+                                  ))}
+                                </OptGroup>
+                              ))}
+                            </Select>
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'debit']}
+                            label={<span style={{ color: '#cf1322', fontWeight: 'bold' }}>Debit</span>}
+                            style={{ flex: 1 }}
+                          >
+                            <InputNumber 
+                              placeholder="0.00" 
+                              style={{ 
+                                width: '100%',
+                                borderColor: '#ffccc7',
+                                backgroundColor: '#fff2f0'
+                              }}
+                              onChange={(value) => {
+                                if (value && Number(value) > 0) {
+                                  form.setFieldValue(['lines', name, 'credit'], undefined);
+                                }
+                              }}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'credit']}
+                            label={<span style={{ color: '#389e0d', fontWeight: 'bold' }}>Credit</span>}
+                            style={{ flex: 1 }}
+                          >
+                            <InputNumber 
+                              placeholder="0.00" 
+                              style={{ 
+                                width: '100%',
+                                borderColor: '#b7eb8f',
+                                backgroundColor: '#f6ffed'
+                              }}
+                              onChange={(value) => {
+                                if (value && Number(value) > 0) {
+                                  form.setFieldValue(['lines', name, 'debit'], undefined);
+                                }
+                              }}
+                            />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'date']}
+                            label="Date"
+                            style={{ flex: 1 }}
+                          >
+                            <DatePicker style={{ width: '100%' }} />
+                          </Form.Item>
+
+                          <Form.Item
+                            {...restField}
+                            name={[name, 'classification_id']}
+                            label="Classification"
+                            style={{ flex: 1 }}
+                          >
+                            <Select 
+                              placeholder="Optional" 
+                              allowClear
+                              showSearch
+                              optionFilterProp="children"
+                              filterOption={(input, option) =>
+                                (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
+                              }
+                              disabled={!form.getFieldValue(['lines', name, 'account_id'])}
+                              onFocus={() => {
+                                // Clear classification if account changed
+                                const selectedAccountId = form.getFieldValue(['lines', name, 'account_id']);
+                                if (!selectedAccountId) {
+                                  form.setFieldValue(['lines', name, 'classification_id'], undefined);
+                                }
+                              }}
+                            >
+                              {classifications.map(classification => (
+                                <Select.Option key={classification.id} value={classification.id}>
+                                  {classification.name}
+                                </Select.Option>
+                              ))}
+                            </Select>
+                          </Form.Item>
+
+                          {fields.length > 2 && (
+                            <Button type="text" onClick={() => remove(name)} style={{ marginBottom: 24 }}>
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      <Form.Item>
+                        <Button type="dashed" onClick={() => add()} block icon={<PlusOutlined />}>
+                          Add Transaction Line
+                        </Button>
+                      </Form.Item>
+                    </>
+                  )}
+                </Form.List>
+              </div>
+            )}
+          </Form>
+        </Modal>
+      </PanelGroup>
+    </div>
   );
 };
 
