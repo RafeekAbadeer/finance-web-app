@@ -169,7 +169,6 @@ const AccountClassifications: React.FC<AccountClassificationsProps> = ({ selecte
       title={
         <div>
           <Title level={5} style={{ margin: 0 }}>Classifications</Title>
-          <Text type="secondary">{selectedAccount.name}</Text>
         </div>
       } 
       size="small"
@@ -192,7 +191,7 @@ const AccountClassifications: React.FC<AccountClassificationsProps> = ({ selecte
             <Button
               type="primary"
               icon={<PlusOutlined />}
-              size="small"
+              //size="small"
               onClick={handleAddClassification}
               disabled={!selectedClassificationId}
               loading={addingClassification}
@@ -212,15 +211,31 @@ const AccountClassifications: React.FC<AccountClassificationsProps> = ({ selecte
           style={{ marginBottom: 16 }}
         />
       ) : (
-        <Table
-          columns={columns}
-          dataSource={classifications}
-          rowKey="id"
-          loading={loading}
-          size="small"
-          pagination={false}
-          scroll={{ y: 200 }}
-        />
+        <div style={{ marginBottom: 16 }}>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>Assigned Classifications:</Text>
+          <div style={{ 
+            display: 'flex', 
+            flexWrap: 'wrap', 
+            gap: 8,
+            padding: 12,
+            border: '1px solid #f0f0f0',
+            borderRadius: 6,
+            backgroundColor: '#fafafa',
+            minHeight: 40
+          }}>
+            {classifications.map(classification => (
+              <Tag
+                key={classification.id}
+                closable
+                color="blue"
+                onClose={() => handleRemoveClassification(classification.id)}
+                style={{ margin: 0 }}
+              >
+                {classification.name}
+              </Tag>
+            ))}
+          </div>
+        </div>
       )}
 
       {availableClassifications.length === 0 && allClassifications.length > 0 && (

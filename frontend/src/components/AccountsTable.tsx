@@ -6,6 +6,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, CreditCardOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { apiService } from '../services/api';
+import AccountClassifications from './AccountClassifications';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -328,7 +329,13 @@ const AccountsTable: React.FC = () => {
         //overflow: 'hidden',
       }}
     >
-      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div 
+        style={{
+          marginBottom: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
         <Title level={2} style={{ margin: 0 }}>Accounts</Title>
         <Button
           type="primary"
@@ -379,80 +386,72 @@ const AccountsTable: React.FC = () => {
         </Col>
 
         {selectedAccount && (
-          <Col span={8}>
-            <Card title="Account Details" size="small" style={{ height: 'fit-content' }}>
-            <Row gutter={[16, 8]}>
-                <Col span={12}>
-                <div>
-                    <Text strong>Name:</Text>
-                    <br />
-                    <Text>{selectedAccount.name}</Text>
-                </div>
-                </Col>
-                <Col span={12}>
-                <div>
-                    <Text strong>Category:</Text>
-                    <br />
-                    <Text>{selectedAccount.category_name}</Text>
-                </div>
-                </Col>
-                <Col span={12}>
-                <div>
-                    <Text strong>Currency:</Text>
-                    <br />
-                    <Text>{selectedAccount.currency_name}</Text>
-                </div>
-                </Col>
-                <Col span={12}>
-                <div>
-                    <Text strong>Nature:</Text>
-                    <br />
+          <Col
+            span={8}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+              flex: 1,
+            }}
+          >
+            <Space direction="vertical" style={{ width: '100%' }} size="middle">
+              <Title level={4} style={{ margin: 0, textAlign: 'left', color: '#1890ff' }}>
+                {selectedAccount.name}
+              </Title>
+              <Card
+                title={<Title level={5} style={{ margin: 0 }}>Account Details</Title>}
+                size="small"
+                style={{ height: 'fit-content' }}
+                bodyStyle={{ padding: 8 }}
+              >
+                <Row gutter={[16, 8]} style={{ margin: 0 }}>
+                  <Col span={6}><Text strong>Category:</Text></Col>
+                  <Col span={6}><Text>{selectedAccount.category_name}</Text></Col>
+                  <Col span={6}><Text strong>Currency:</Text></Col>
+                  <Col span={6}><Text>{selectedAccount.currency_name}</Text></Col>
+                  <Col span={6}><Text strong>Nature:</Text></Col>
+                  <Col span={6}>
                     {(() => {
-                    const option = natureOptions.find(opt => opt.value === selectedAccount.nature);
-                    return <Tag color={option?.color}>{option?.label}</Tag>;
+                      const option = natureOptions.find(opt => opt.value === selectedAccount.nature);
+                      return <Tag color={option?.color}>{option?.label}</Tag>;
                     })()}
-                </div>
-                </Col>
-                <Col span={12}>
-                <div>
-                    <Text strong>Term:</Text>
-                    <br />
-                    <Text>{selectedAccount.term.replace(/\b\w/g, l => l.toUpperCase())}</Text>
-                </div>
-                </Col>
-                {/* Add empty Col to balance layout if odd number of fields */}
-                <Col span={12}></Col>
-                {selectedAccount.is_credit_card && (
-                <>
-                    <Col span={24}>
-                    <Divider style={{ marginTop: 8, marginBottom: 2 }} />
-                    <Title level={5} style={{ marginBottom: 8 }}>Credit Card Details</Title>
+                  </Col>
+                  <Col span={6}><Text strong>Term:</Text></Col>
+                  <Col span={6}><Text>{selectedAccount.term.replace(/\b\w/g, l => l.toUpperCase())}</Text></Col>
+                </Row>
+              </Card>
+
+              {selectedAccount.is_credit_card && (
+                <Card
+                  title={<Title level={5} style={{ margin: 0 }}>Credit Card Details</Title>}
+                  size="small"
+                  style={{ marginTop: 0, marginBottom: 0 }}
+                  bodyStyle={{ padding: 8 }}
+                >
+                  <Row gutter={[16, 8]} style={{ margin: 0 }}>
+                    <Col flex="auto">
+                      <Text strong>Credit Limit:</Text>
+                      <span style={{ marginLeft: 8 }} />
+                      <Text>${selectedAccount.credit_limit?.toLocaleString()}</Text>
                     </Col>
-                    <Col span={12}>
-                    <div>
-                        <Text strong>Credit Limit:</Text>
-                        <br />
-                        <Text>${selectedAccount.credit_limit?.toLocaleString()}</Text>
-                    </div>
+                    <Col flex="auto">
+                      <Text strong>Statement Close Day:</Text>
+                      <span style={{ marginLeft: 8 }} />
+                      <Text>{selectedAccount.close_day}</Text>
                     </Col>
-                    <Col span={12}>
-                    <div>
-                        <Text strong>Statement Close Day:</Text>
-                        <br />
-                        <Text>{selectedAccount.close_day}</Text>
-                    </div>
+                    <Col flex="auto">
+                      <Text strong>Payment Due Day:</Text>
+                      <span style={{ marginLeft: 8 }} />
+                      <Text>{selectedAccount.due_day}</Text>
                     </Col>
-                    <Col span={12}>
-                    <div>
-                        <Text strong>Payment Due Day:</Text>
-                        <br />
-                        <Text>{selectedAccount.due_day}</Text>
-                    </div>
-                    </Col>
-                </>
-                )}
-            </Row>
-            </Card>
+                  </Row>
+                </Card>
+              )}
+              
+              {/* New Account Classifications Component */}
+              <AccountClassifications selectedAccount={selectedAccount} />
+            </Space>
           </Col>
         )}
       </Row>
