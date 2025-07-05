@@ -1,22 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Table,
-  Button,
-  Space,
-  Popconfirm,
-  message,
-  Tag,
-  Modal,
-  Form,
-  Input,
-  Select,
-  Switch,
-  InputNumber,
-  Card,
-  Divider,
-  Typography,
-  Row,
-  Col
+  Table, Button, Space, Popconfirm, message, Tag, Modal, Form, Input, Select, Switch, InputNumber,
+  Card, Divider, Typography, Row, Col, Layout, Menu
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, CreditCardOutlined, SearchOutlined } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -322,7 +307,7 @@ const AccountsTable: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '24px 24px 0px 24px' }}>
       <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2} style={{ margin: 0 }}>Accounts</Title>
         <Button
@@ -359,7 +344,7 @@ const AccountsTable: React.FC = () => {
                 backgroundColor: selectedAccount?.id === record.id ? '#e6f7ff' : undefined
               }
             })}
-            scroll={{ x: 580, y: 400 }}
+            scroll={{ x: 580, y: 450 }}
             size="small"
           />
         </Col>

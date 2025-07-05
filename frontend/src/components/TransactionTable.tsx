@@ -82,7 +82,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Date',
       dataIndex: 'date',
       key: 'date',
-      width: 90, // Fits "dd.mm.yy" format perfectly
+      width: selectedTransaction ? '8%' : '10%', // Fits "dd.mm.yy" format perfectly
       sorter: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       render: (date: string) => {
         const d = new Date(date);
@@ -96,6 +96,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
+      width: selectedTransaction ? '30%' : '40%',
       ellipsis: true,
       sorter: (a, b) => a.description.localeCompare(b.description),
       // This will be the flexible column - takes remaining space
@@ -104,7 +105,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      width: 110, // Fits "Amount" header + reasonable amounts
+      width: selectedTransaction ? '9%' : '12%', // Fits "Amount" header + reasonable amounts
       align: 'right',
       sorter: (a, b) => a.amount - b.amount,
       render: (amount: number) => (
@@ -117,20 +118,20 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Currency',
       dataIndex: 'currency_name',
       key: 'currency_name',
-      width: 90, // Fits "Currency" header + "EGP", "USD", etc.
+      width: selectedTransaction ? '8%' : '12%', // Fits "Currency" header + "EGP", "USD", etc.
     },
     {
       title: 'Lines',
       dataIndex: 'line_count',
       key: 'line_count',
-      width: 70, // Fits "Lines" header + reasonable line counts
+      width: selectedTransaction ? '8%' : '10%', // Fits "Lines" header + reasonable line counts
       align: 'center',
     },
     
     {
       title: 'Actions',
       key: 'actions',
-      width: 120,
+      width: selectedTransaction ? '8%' : '10%',
       render: (_, record: Transaction) => (
         <Space size="small">
           <Button
@@ -172,6 +173,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Account',
       dataIndex: 'account_name',
       key: 'account_name',
+      width: '20%',
       ellipsis: true,
       // This will be the flexible column - takes remaining space
     },
@@ -179,7 +181,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Debit',
       dataIndex: 'debit',
       key: 'debit',
-      width: 100, // Fits "Debit" header + reasonable amounts
+      width: '19%', // Fits "Debit" header + reasonable amounts
       align: 'right',
       render: (debit: number | null) => 
         debit ? <Tag color="red" style={{ margin: 0 }}>{debit.toFixed(2)}</Tag> : null,
@@ -188,7 +190,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Credit',
       dataIndex: 'credit',
       key: 'credit',
-      width: 100, // Fits "Credit" header + reasonable amounts
+      width: '19%', // Fits "Credit" header + reasonable amounts
       align: 'right',
       render: (credit: number | null) => 
         credit ? <Tag color="green" style={{ margin: 0 }}>{credit.toFixed(2)}</Tag> : null,
@@ -197,7 +199,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Date',
       dataIndex: 'date',
       key: 'date',
-      width: 90, // Same as transactions table
+      width: '17%', // Same as transactions table
       render: (date: string) => {
         const d = new Date(date);
         const day = d.getDate().toString().padStart(2, '0');
@@ -210,7 +212,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Classification',
       dataIndex: 'classification_name',
       key: 'classification_name',
-      width: 130, // Fits "Classification" header + reasonable classification names
+      width: '25%', // Fits "Classification" header + reasonable classification names
       ellipsis: true,
       render: (classification: string | null) => classification || '',
     },
@@ -453,10 +455,12 @@ const TransactionMasterDetail: React.FC = () => {
   //console.log(accounts[0])
 
   return (
-    <div style={{ padding: '24px', height: '100%', boxSizing: 'border-box', border: '1px solid green'  // Temporary - to see container bounds 
+    <div style={{ padding: '24px 24px 0px 24px', height: '100%', border: '1px solid green',
+      display: 'flex', flexDirection: 'column',
+  // Temporary - to see container bounds 
       }}>
       <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', 
-        alignItems: 'center', flexShrink: 0, border: '1px solid orange' }}>
+        alignItems: 'center', flexShrink: 0, /*border: '1px solid orange'*/ }}>
         <Title level={2} style={{ margin: 0 }}>Transactions</Title>
         <Button
           type="primary"
@@ -466,9 +470,9 @@ const TransactionMasterDetail: React.FC = () => {
           Add Transaction
         </Button>
       </div>
-      <PanelGroup direction="horizontal" style={{ height: '100%', flex: 1}}>
+      <PanelGroup direction="horizontal" style={{ /*height: '100%',*/ flex: 1, minHeight: 0}}>
         {/* Top - Transactions Table */}
-        <Panel defaultSize={60} minSize={40} style={{ padding: '0px' }}>
+        <Panel defaultSize={selectedTransaction ? 60 : 100} minSize={40} style={{ padding: '0px' }}>
           <Table
             columns={transactionColumns}
             dataSource={transactions}
@@ -490,7 +494,7 @@ const TransactionMasterDetail: React.FC = () => {
                 loadTransactions(1, size);
               }
             }}
-            scroll={{ x: 800, y: 400 }}
+            scroll={{ y: 450 }}
             onRow={(record) => ({
               onClick: () => handleTransactionClick(record),
               style: { 
@@ -501,41 +505,42 @@ const TransactionMasterDetail: React.FC = () => {
           />
         </Panel>
 
-        <PanelResizeHandle style={{ width: '4px', background: '#d9d9d9' }} />
-
         {/* Bottom - Transaction Lines */}
         {selectedTransaction && (
-          <Panel defaultSize={40} minSize={25}>
-            <Card 
-              title={
-                <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
-                  Lines: {selectedTransaction.description}
-                </span>
-              }
-              size="small"
-              style={{ 
-                display: 'flex', 
-                flexDirection: 'column'
-              }}
-              bodyStyle={{ 
-                flex: 1, 
-                overflow: 'hidden', 
-                display: 'flex', 
-                flexDirection: 'column',
-                padding: '12px'
-              }}
-            >
-              <Table
-                columns={linesColumns}
-                dataSource={transactionLines}
-                rowKey="id"
-                loading={linesLoading}
-                pagination={false}
+          <>
+            <PanelResizeHandle style={{ width: '4px', background: '#fafafa', margin: '16px 8px 60px 8px' }} />
+            <Panel defaultSize={40} minSize={25}>
+              <Card 
+                title={
+                  <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                    Lines: {selectedTransaction.description}
+                  </span>
+                }
                 size="small"
-                scroll={{ x: 600, y: 300 }}
-              />
-            </Card>
-          </Panel>
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column'
+                }}
+                bodyStyle={{ 
+                  flex: 1, 
+                  overflow: 'hidden', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  padding: '12px'
+                }}
+              >
+                <Table
+                  columns={linesColumns}
+                  dataSource={transactionLines}
+                  rowKey="id"
+                  loading={linesLoading}
+                  pagination={false}
+                  size="small"
+                  scroll={{ y: 300 }}
+                />
+              </Card>
+            </Panel>
+          </>
         )}
         {/* Smart Transaction Form Modal */}
         <Modal

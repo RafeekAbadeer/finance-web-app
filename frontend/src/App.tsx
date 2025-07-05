@@ -57,7 +57,7 @@ function App() {
     switch (selectedKey) {
       case 'dashboard':
         return (
-          <div>
+          <div  style={{padding: '0 24px'}}>
             <Title level={2}>Dashboard</Title>
             <p><strong>API Status:</strong> {apiStatus}</p>
             <p><strong>Transactions Count:</strong> {transactions.length}</p>
@@ -68,26 +68,27 @@ function App() {
       case 'accounts':
         return <AccountsTable />;
       case 'settings':
-        return <Title level={2}>Settings - Coming Soon!</Title>;
+        return <Title level={2} style={{padding: '0 24px'}}>Settings - Coming Soon!</Title>;
       default:
         return <Title level={2}>Dashboard</Title>;
     }
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ padding: '0 24px', background: '#001529', height: 64, lineHeight: '64px' }}>
-        <Title level={3} style={{ color: 'white', margin: 0, lineHeight: '64px' }}>
+    <Layout style={{ minHeight: 'calc(100vh-64px)', border: '3px solid purple'}} /*className="main-layout"*/>
+      <Header style={{ /*padding: '0 24px',*/ /*background: 'transparent',*/background: '#001529', height: 64, /*lineHeight: '64px'*/ }}>
+        <Title level={3} style={{ color: 'gray', margin: 0, lineHeight: '64px' }}>
           Finance Manager
         </Title>
       </Header>
-      <Layout style={{ flex: 1, display: 'flex' }}>
+      <Layout style={{ flex: 1, display: 'flex', height: 'calc(100vh - 64px)', padding: '76px 0px 0px 0px' }}>
         <Sider
           width={200}
           style={{
             background: '#fff',
-            border: '1px solid yellow',
             paddingTop: 24,
+            borderRadius: 8,
+            height: '100%', // Ensure Sider fills the parent's height
           }}
         >
           <Menu
@@ -98,7 +99,7 @@ function App() {
             items={menuItems}
           />
         </Sider>
-        <Layout style={{ padding: '0 0 0 16px', flex: 1, display: 'flex' }}>
+        <Layout style={{ padding: '0 0 0 16px', margin: 0, flex: 1, display: 'flex', height: '100%' }}>
           <Content
             style={{
               padding: 0,
