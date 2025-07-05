@@ -201,7 +201,7 @@ const AccountsTable: React.FC = () => {
       title: 'Name',
       dataIndex: 'name',
       key: 'name',
-      width: 180,
+      width: '22%',
       sorter: (a, b) => a.name.localeCompare(b.name),
       filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
         <div style={{ padding: 8 }}>
@@ -235,7 +235,7 @@ const AccountsTable: React.FC = () => {
       title: 'Category',
       dataIndex: 'category_name',
       key: 'category_name',
-      width: 100,
+      width: '24%',
       sorter: (a, b) => a.category_name.localeCompare(b.category_name),
       filters: Array.from(new Set(accounts.map(a => a.category_name))).map(category => ({
         text: category,
@@ -247,7 +247,7 @@ const AccountsTable: React.FC = () => {
       title: 'Currency',
       dataIndex: 'currency_name',
       key: 'currency_name',
-      width: 80,
+      width: '23%',
       sorter: (a, b) => a.currency_name.localeCompare(b.currency_name),
       filters: Array.from(new Set(accounts.map(a => a.currency_name))).map(currency => ({
         text: currency,
@@ -259,7 +259,7 @@ const AccountsTable: React.FC = () => {
       title: 'Nature',
       dataIndex: 'nature',
       key: 'nature',
-      width: 80,
+      width: '17%',
       render: (nature: string) => {
         const option = natureOptions.find(opt => opt.value === nature);
         return <Tag color={option?.color}>{option?.label}</Tag>;
@@ -270,19 +270,17 @@ const AccountsTable: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      width: 140,
+      width: '16%',
       render: (_, record) => (
         <Space>
           <Button
-            type="link"
+            type="text"
             icon={<EditOutlined />}
             onClick={(e) => {
               e.stopPropagation();
               handleEdit(record);
             }}
-          >
-            Edit
-          </Button>
+          />
           <Popconfirm
             title="Are you sure you want to delete this account?"
             onConfirm={(e) => {
@@ -293,21 +291,43 @@ const AccountsTable: React.FC = () => {
             cancelText="No"
           >
             <Button 
-              type="link" 
+              type="text" 
               danger 
               icon={<DeleteOutlined />}
               onClick={(e) => e.stopPropagation()}
-            >
-              Delete
-            </Button>
+            />
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
+  const [tableScrollY, setTableScrollY] = useState(400);
+
+  useEffect(() => {
+    function updateTableHeight() {
+      // Find the parent container (adjust selector as needed)
+      const parent = document.getElementById('accounts-table-parent');
+      if (parent) {
+        setTableScrollY(parent.clientHeight - 180);
+      }
+    }
+    updateTableHeight();
+    window.addEventListener('resize', updateTableHeight);
+    return () => window.removeEventListener('resize', updateTableHeight);
+  }, []);
+
   return (
-    <div style={{ padding: '24px 24px 0px 24px' }}>
+    <div
+      id="accounts-table-parent"
+      style={{
+        padding: '24px 24px 0px 24px',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        //overflow: 'hidden',
+      }}
+    >
       <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={2} style={{ margin: 0 }}>Accounts</Title>
         <Button
@@ -319,34 +339,43 @@ const AccountsTable: React.FC = () => {
         </Button>
       </div>
 
-      <Row gutter={24}>
-        <Col span={selectedAccount ? 16 : 24}>
+      <Row gutter={24} style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        <Col span={selectedAccount ? 16 : 24} style={{ display: 'flex', flexDirection: 'column', minHeight:'0' }}>
           {/* Accounts Table */}
-          <Table
-            columns={columns}
-            dataSource={accounts}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              current: currentPage,
-              pageSize: pageSize,
-              total: total,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} accounts`,
-              pageSizeOptions: ['5', '10', '15', '20'],
-            }}
-            onChange={handleTableChange}
-            onRow={(record) => ({
-              onClick: () => setSelectedAccount(record),
-              style: { 
-                cursor: 'pointer',
-                backgroundColor: selectedAccount?.id === record.id ? '#e6f7ff' : undefined
-              }
-            })}
-            scroll={{ x: 580, y: 450 }}
-            size="small"
-          />
+          <div style={{ 
+            flex: 1, 
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflowX: 'auto',
+          }}>
+            <Table
+              columns={columns}
+              dataSource={accounts}
+              rowKey="id"
+              loading={loading}
+              pagination={{
+                current: currentPage,
+                pageSize: pageSize,
+                total: total,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} accounts`,
+                pageSizeOptions: ['5', '10', '15', '20'],
+              }}
+              onChange={handleTableChange}
+              onRow={(record) => ({
+                onClick: () => setSelectedAccount(record),
+                style: {
+                  cursor: 'pointer',
+                  backgroundColor: selectedAccount?.id === record.id ? '#e6f7ff' : undefined,
+                },
+              })}
+              scroll={{ /*x: 600,*/ y: tableScrollY }}
+              size="small"
+              style={{ flex: 1, minWidth: 570 }}
+            />
+          </div>
         </Col>
 
         {selectedAccount && (

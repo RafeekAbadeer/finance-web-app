@@ -4,7 +4,7 @@ import { Table, Card, Typography, Tag, message, Button, Modal, Form, Input, Sele
 import { apiService, Transaction, TransactionLine, Account, Currency, Classification, 
   TransactionFormData } from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
@@ -29,10 +29,31 @@ const TransactionMasterDetail: React.FC = () => {
     pageSize: 15,
     total: 0,
   });
+  const [tableScrollY, setTableScrollY] = useState(400);
+  const [amountFilter, setAmountFilter] = useState<{ min?: number; max?: number }>({});
+  const [accountClassifications, setAccountClassifications] = useState<Record<number, Classification[]>>({});
 
   useEffect(() => {
     loadTransactions(1, 15);
     loadSupportingData();
+  }, []);
+
+  useEffect(() => {
+    function updateTableHeight() {
+      const parent = document.getElementById('transactions-table-parent');
+      if (parent) {
+        // Calculate the height used by the header and PanelGroup margin/padding
+        // Adjust this value as needed for your layout
+        const header = parent.querySelector('.transactions-header');
+        const headerHeight = header ? (header as HTMLElement).offsetHeight : 0;
+        // 24px top padding + 16px marginBottom + 24px bottom padding (if any)
+        const extra = 180; // adjust as needed
+        setTableScrollY(parent.clientHeight - extra);
+      }
+    }
+    updateTableHeight();
+    window.addEventListener('resize', updateTableHeight);
+    return () => window.removeEventListener('resize', updateTableHeight);
   }, []);
 
   const loadTransactions = async (page: number = 1, pageSize: number = 15) => {
@@ -71,6 +92,20 @@ const TransactionMasterDetail: React.FC = () => {
     }
   };
 
+  const loadAccountClassifications = async (accountId: number) => {
+    if (!accountId || accountClassifications[accountId]) return; // Don't reload if already loaded
+    
+    try {
+      const classifications = await apiService.getAccountClassifications(accountId);
+      setAccountClassifications(prev => ({
+        ...prev,
+        [accountId]: classifications
+      }));
+    } catch (error) {
+      console.error('Failed to load account classifications:', error);
+    }
+  };
+
   const handleTransactionClick = (transaction: Transaction) => {
     setSelectedTransaction(transaction);
     loadTransactionLines(transaction.id);
@@ -82,7 +117,7 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Date',
       dataIndex: 'date',
       key: 'date',
-      width: selectedTransaction ? '8%' : '10%', // Fits "dd.mm.yy" format perfectly
+      width: selectedTransaction ? '10%' : '10%', // Fits "dd.mm.yy" format perfectly
       sorter: (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
       render: (date: string) => {
         const d = new Date(date);
@@ -91,21 +126,102 @@ const TransactionMasterDetail: React.FC = () => {
         const year = d.getFullYear().toString().slice(-2);
         return `${day}.${month}.${year}`;
       },
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <DatePicker
+            placeholder="From date"
+            value={
+              (() => {
+                const from = String(selectedKeys[0] ?? '').split('|')[0];
+                return from ? dayjs(from) : null;
+              })()
+            }
+            onChange={date => {
+              const to = String(selectedKeys[0] ?? '').split('|')[1] || '';
+              const from = date ? date.format('YYYY-MM-DD') : '';
+              setSelectedKeys([from || to ? `${from}|${to}` : '']);
+            }}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <DatePicker
+            placeholder="To date"
+            value={
+              (() => {
+                const to = String(selectedKeys[0] ?? '').split('|')[1];
+                return to ? dayjs(to) : null;
+              })()
+            }
+            onChange={date => {
+              const from = String(selectedKeys[0] ?? '').split('|')[0] || '';
+              const to = date ? date.format('YYYY-MM-DD') : '';
+              setSelectedKeys([from || to ? `${from}|${to}` : '']);
+            }}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button type="primary" onClick={() => confirm()} size="small">Filter</Button>
+            <Button onClick={() => clearFilters && clearFilters()} size="small">Reset</Button>
+          </Space>
+        </div>
+      ),
+      filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+      onFilter: (value, record) => {
+        if (!value) return true;
+        const [from, to] = String(value).split('|'); // <-- Fix here
+        const recordDate = new Date(record.date);
+        const fromDate = from ? new Date(from) : null;
+        const toDate = to ? new Date(to) : null;
+
+        if (fromDate && toDate) {
+          return recordDate >= fromDate && recordDate <= toDate;
+        } else if (fromDate) {
+          return recordDate >= fromDate;
+        } else if (toDate) {
+          return recordDate <= toDate;
+        }
+        return true;
+      },
     },
     {
       title: 'Description',
       dataIndex: 'description',
       key: 'description',
-      width: selectedTransaction ? '30%' : '40%',
+      width: selectedTransaction ? '22%' : '34%',
       ellipsis: true,
       sorter: (a, b) => a.description.localeCompare(b.description),
-      // This will be the flexible column - takes remaining space
+      filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="Search description"
+            value={selectedKeys[0]}
+            onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+            onPressEnter={() => confirm()}
+            style={{ marginBottom: 8, display: 'block' }}
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              icon={<SearchOutlined />}
+              size="small"
+            >
+              Search
+            </Button>
+            <Button onClick={() => clearFilters && clearFilters()} size="small">
+              Reset
+            </Button>
+          </Space>
+        </div>
+      ),
+      filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+      onFilter: (value, record) =>
+        record.description.toLowerCase().includes(value.toString().toLowerCase()),
     },
     {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      width: selectedTransaction ? '9%' : '12%', // Fits "Amount" header + reasonable amounts
+      width: selectedTransaction ? '12%' : '15%',
       align: 'right',
       sorter: (a, b) => a.amount - b.amount,
       render: (amount: number) => (
@@ -113,12 +229,56 @@ const TransactionMasterDetail: React.FC = () => {
           {Math.abs(amount).toFixed(2)}
         </Tag>
       ),
+      filterDropdown: ({ confirm, clearFilters }) => (
+        <div style={{ padding: 8 }}>
+          <Input
+            placeholder="Min amount"
+            value={amountFilter.min}
+            onChange={e => setAmountFilter(f => ({ ...f, min: e.target.value ? parseFloat(e.target.value) : undefined }))}
+            style={{ marginBottom: 8, display: 'block' }}
+            type="number"
+          />
+          <Input
+            placeholder="Max amount"
+            value={amountFilter.max}
+            onChange={e => setAmountFilter(f => ({ ...f, max: e.target.value ? parseFloat(e.target.value) : undefined }))}
+            style={{ marginBottom: 8, display: 'block' }}
+            type="number"
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={()=>confirm()}
+              size="small"
+            >
+              Filter
+            </Button>
+            <Button
+              onClick={() => {
+                setAmountFilter({});
+                clearFilters && clearFilters();
+              }}
+              size="small"
+            >
+              Reset
+            </Button>
+          </Space>
+        </div>
+      ),
+      filterIcon: filtered => <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />,
+      onFilter: () => true, // <-- Add this line
     },
     {
       title: 'Currency',
       dataIndex: 'currency_name',
       key: 'currency_name',
-      width: selectedTransaction ? '8%' : '12%', // Fits "Currency" header + "EGP", "USD", etc.
+      width: selectedTransaction ? '12%' : '15%', // Fits "Currency" header + "EGP", "USD", etc.
+      filters: Array.from(new Set(transactions.map(t => t.currency_name))).map(currency => ({
+        text: currency,
+        value: currency,
+      })),
+      onFilter: (value, record) => record.currency_name === value,
+      sorter: (a, b) => a.currency_name.localeCompare(b.currency_name),
     },
     {
       title: 'Lines',
@@ -181,7 +341,8 @@ const TransactionMasterDetail: React.FC = () => {
       title: 'Debit',
       dataIndex: 'debit',
       key: 'debit',
-      width: '19%', // Fits "Debit" header + reasonable amounts
+      width: '19%' // Fits "Debit" header + reasonable amounts
+      ,
       align: 'right',
       render: (debit: number | null) => 
         debit ? <Tag color="red" style={{ margin: 0 }}>{debit.toFixed(2)}</Tag> : null,
@@ -445,22 +606,44 @@ const TransactionMasterDetail: React.FC = () => {
 
   // Get classifications available for a specific account
   const getClassificationsForAccount = (accountId: number) => {
-    if (!accountId) return classifications;
+    if (!accountId) return [];
     
     // For now, return all classifications
     // Later you can implement account-specific filtering based on your database logic
-    return classifications;
+    return accountClassifications[accountId] || [];
   };
 
   //console.log(accounts[0])
 
+  const filteredTransactions = transactions.filter(tx => {
+    const amount = Math.abs(tx.amount);
+    const min = amountFilter.min;
+    const max = amountFilter.max;
+    if (min !== undefined && amount < min) return false;
+    if (max !== undefined && amount > max) return false;
+    return true;
+  });
+
   return (
-    <div style={{ padding: '24px 24px 0px 24px', height: '100%', border: '1px solid green',
-      display: 'flex', flexDirection: 'column',
-  // Temporary - to see container bounds 
-      }}>
-      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', 
-        alignItems: 'center', flexShrink: 0, /*border: '1px solid orange'*/ }}>
+    <div
+      id="transactions-table-parent"
+      style={{
+        padding: '24px 24px 0px 24px',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <div
+        className="transactions-header"
+        style={{
+          marginBottom: '16px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          //flexShrink: 0,
+        }}
+      >
         <Title level={2} style={{ margin: 0 }}>Transactions</Title>
         <Button
           type="primary"
@@ -470,12 +653,12 @@ const TransactionMasterDetail: React.FC = () => {
           Add Transaction
         </Button>
       </div>
-      <PanelGroup direction="horizontal" style={{ /*height: '100%',*/ flex: 1, minHeight: 0}}>
-        {/* Top - Transactions Table */}
+      <PanelGroup direction="horizontal" style={{ flex: 1, minHeight: 0 }}>
+        {/* Left - Transactions Table */}
         <Panel defaultSize={selectedTransaction ? 60 : 100} minSize={40} style={{ padding: '0px' }}>
           <Table
             columns={transactionColumns}
-            dataSource={transactions}
+            dataSource={filteredTransactions}
             rowKey="id"
             loading={loading}
             size="small"
@@ -494,7 +677,7 @@ const TransactionMasterDetail: React.FC = () => {
                 loadTransactions(1, size);
               }
             }}
-            scroll={{ y: 450 }}
+            scroll={{ y: tableScrollY }}
             onRow={(record) => ({
               onClick: () => handleTransactionClick(record),
               style: { 
@@ -505,10 +688,10 @@ const TransactionMasterDetail: React.FC = () => {
           />
         </Panel>
 
-        {/* Bottom - Transaction Lines */}
+        {/* Right - Transaction Lines */}
         {selectedTransaction && (
           <>
-            <PanelResizeHandle style={{ width: '4px', background: '#fafafa', margin: '16px 8px 60px 8px' }} />
+            <PanelResizeHandle style={{ width: '4px', background: '#f5f5f5', margin: '16px 8px 16px 8px' }} />
             <Panel defaultSize={40} minSize={25}>
               <Card 
                 title={
@@ -590,7 +773,14 @@ const TransactionMasterDetail: React.FC = () => {
                   rules={[{ required: true, message: 'Please select currency' }]}
                   style={{ flex: 1 }}
                 >
-                  <Select placeholder="Select currency">
+                  <Select
+                    placeholder="Select currency"
+                    showSearch
+                    optionFilterProp="children"
+                    filterOption={(input, option) =>
+                      (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
+                    }               
+                  >
                     {currencies.map(currency => (
                       <Select.Option key={currency.id} value={currency.id}>
                         {currency.name}
@@ -686,9 +876,13 @@ const TransactionMasterDetail: React.FC = () => {
                               filterOption={(input, option) =>
                                 (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
                               }
-                              onChange={() => {
+                              onChange={(value) => {
                                 // Clear classification when account changes
                                 form.setFieldValue(['lines', name, 'classification_id'], undefined);
+                                // Load classifications for the selected account
+                                if (value) {
+                                  loadAccountClassifications(value);
+                                }
                               }}
                             >
                               {Object.entries(
@@ -784,7 +978,7 @@ const TransactionMasterDetail: React.FC = () => {
                                 }
                               }}
                             >
-                              {classifications.map(classification => (
+                              {getClassificationsForAccount(form.getFieldValue(['lines', name, 'account_id'])).map(classification => (
                                 <Select.Option key={classification.id} value={classification.id}>
                                   {classification.name}
                                 </Select.Option>

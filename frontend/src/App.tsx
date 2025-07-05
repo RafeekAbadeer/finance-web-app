@@ -75,31 +75,35 @@ function App() {
   };
 
   return (
-    <Layout style={{ minHeight: 'calc(100vh-64px)', border: '3px solid purple'}} /*className="main-layout"*/>
+    <Layout style={{ minHeight: 'calc(100vh-64px)', /*border: '3px solid purple'*/}} /*className="main-layout"*/>
       <Header style={{ /*padding: '0 24px',*/ /*background: 'transparent',*/background: '#001529', height: 64, /*lineHeight: '64px'*/ }}>
-        <Title level={3} style={{ color: 'gray', margin: 0, lineHeight: '64px' }}>
+        <Title level={3} style={{ color: 'lightgray', margin: 0, lineHeight: '64px' }}>
           Finance Manager
         </Title>
       </Header>
       <Layout style={{ flex: 1, display: 'flex', height: 'calc(100vh - 64px)', padding: '76px 0px 0px 0px' }}>
-        <Sider
-          width={200}
-          style={{
-            background: '#fff',
-            paddingTop: 24,
-            borderRadius: 8,
-            height: '100%', // Ensure Sider fills the parent's height
-          }}
-        >
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            onClick={({ key }) => setSelectedKey(key)}
-            style={{ height: '100%', borderRight: 0, overflow: 'auto' }}
-            items={menuItems}
-          />
-        </Sider>
-        <Layout style={{ padding: '0 0 0 16px', margin: 0, flex: 1, display: 'flex', height: '100%' }}>
+          <Sider
+            width={200}
+            theme='light'
+            style={{
+              background: 'transparent', // You can change this to '#fff' or any color you prefer
+              //border: '3px solid yellow',
+              //paddingTop: 24,
+              padding: '0 0px 16px 16px',
+              //borderRadius: 8,
+              height: '100%', // Ensure Sider fills the parent's height
+            }}
+          >
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              onClick={({ key }) => setSelectedKey(key)}
+              style={{ background: '#fff', padding: 8,//border: '3px solid black',
+                height: '100%', borderRight: 0, overflow: 'auto', borderRadius: 8 }}
+              items={menuItems}
+            />
+          </Sider>
+        <Layout style={{ padding: '0 16px 16px 16px', margin: 0, flex: 1, display: 'flex', height: '100%' }}>
           <Content
             style={{
               padding: 0,

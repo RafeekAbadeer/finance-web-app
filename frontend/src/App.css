@@ -19,11 +19,6 @@
   height: calc(100vh);
 }
 
-/* Ensure content doesn't overlap with header */
-.ant-layout-content {
-  /*overflow: hidden;*/
-}
-
 html {
   height: 100%;
   margin: 0;
