@@ -304,19 +304,32 @@ const AccountsTable: React.FC = () => {
   ];
 
   const [tableScrollY, setTableScrollY] = useState(400);
+  const [rightSectionHeight, setRightSectionHeight] = useState(400);
 
   useEffect(() => {
     function updateTableHeight() {
       // Find the parent container (adjust selector as needed)
       const parent = document.getElementById('accounts-table-parent');
       if (parent) {
-        setTableScrollY(parent.clientHeight - 180);
+        const header = parent.querySelector('.transactions-header');
+        const headerHeight = header ? (header as HTMLElement).offsetHeight : 0;
+        const extra = 180; // adjust as needed
+        // Calculate both table and right section heights
+        const availableHeight = parent.clientHeight - extra;
+        setTableScrollY(availableHeight);
+        setRightSectionHeight(availableHeight+101.6);
       }
     }
     updateTableHeight();
     window.addEventListener('resize', updateTableHeight);
     return () => window.removeEventListener('resize', updateTableHeight);
   }, []);
+
+  
+
+
+
+
 
   return (
     <div
@@ -395,63 +408,82 @@ const AccountsTable: React.FC = () => {
               flex: 1,
             }}
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="middle">
-              <Title level={4} style={{ margin: 0, textAlign: 'left', color: '#1890ff' }}>
-                {selectedAccount.name}
-              </Title>
-              <Card
-                title={<Title level={5} style={{ margin: 0 }}>Account Details</Title>}
-                size="small"
-                style={{ height: 'fit-content' }}
-                bodyStyle={{ padding: 8 }}
-              >
-                <Row gutter={[16, 8]} style={{ margin: 0 }}>
-                  <Col span={6}><Text strong>Category:</Text></Col>
-                  <Col span={6}><Text>{selectedAccount.category_name}</Text></Col>
-                  <Col span={6}><Text strong>Currency:</Text></Col>
-                  <Col span={6}><Text>{selectedAccount.currency_name}</Text></Col>
-                  <Col span={6}><Text strong>Nature:</Text></Col>
-                  <Col span={6}>
-                    {(() => {
-                      const option = natureOptions.find(opt => opt.value === selectedAccount.nature);
-                      return <Tag color={option?.color}>{option?.label}</Tag>;
-                    })()}
-                  </Col>
-                  <Col span={6}><Text strong>Term:</Text></Col>
-                  <Col span={6}><Text>{selectedAccount.term.replace(/\b\w/g, l => l.toUpperCase())}</Text></Col>
-                </Row>
-              </Card>
-
-              {selectedAccount.is_credit_card && (
+            <div style={{
+              height: rightSectionHeight,
+              overflowY: 'auto',
+              overflowX: 'auto',
+              minWidth: 0
+              //padding: '0 8px',
+            }}
+            >
+              <Space direction="vertical" style={{ width: '100%' }} size="middle">
+                <Title level={4} style={{ margin: 0, textAlign: 'left', color: '#1890ff', wordBreak: 'break-word' }}>
+                  {selectedAccount.name}
+                </Title>
                 <Card
-                  title={<Title level={5} style={{ margin: 0 }}>Credit Card Details</Title>}
+                  title={<Title level={5} style={{ margin: 0 }}>Account Details</Title>}
                   size="small"
-                  style={{ marginTop: 0, marginBottom: 0 }}
+                  style={{ height: 'fit-content' }}
                   bodyStyle={{ padding: 8 }}
                 >
                   <Row gutter={[16, 8]} style={{ margin: 0 }}>
                     <Col flex="auto">
-                      <Text strong>Credit Limit:</Text>
+                      <Text strong>Category:</Text>
                       <span style={{ marginLeft: 8 }} />
-                      <Text>${selectedAccount.credit_limit?.toLocaleString()}</Text>
+                      <Text>{selectedAccount.category_name}</Text>
                     </Col>
                     <Col flex="auto">
-                      <Text strong>Statement Close Day:</Text>
+                      <Text strong>Currency:</Text>
                       <span style={{ marginLeft: 8 }} />
-                      <Text>{selectedAccount.close_day}</Text>
+                      <Text>{selectedAccount.currency_name}</Text>
                     </Col>
                     <Col flex="auto">
-                      <Text strong>Payment Due Day:</Text>
+                      <Text strong>Nature:</Text>
                       <span style={{ marginLeft: 8 }} />
-                      <Text>{selectedAccount.due_day}</Text>
+                      {(() => {
+                        const option = natureOptions.find(opt => opt.value === selectedAccount.nature);
+                        return <Tag color={option?.color}>{option?.label}</Tag>;
+                      })()}
+                    </Col>
+                    <Col flex="auto">
+                      <Text strong>Term:</Text>
+                      <span style={{ marginLeft: 8 }} />
+                      <Text>{selectedAccount.term.replace(/\b\w/g, l => l.toUpperCase())}</Text>
                     </Col>
                   </Row>
                 </Card>
-              )}
-              
-              {/* New Account Classifications Component */}
-              <AccountClassifications selectedAccount={selectedAccount} />
-            </Space>
+
+                {selectedAccount.is_credit_card && (
+                  <Card
+                    title={<Title level={5} style={{ margin: 0 }}>Credit Card Details</Title>}
+                    size="small"
+                    style={{ marginTop: 0, marginBottom: 0 }}
+                    bodyStyle={{ padding: 8 }}
+                  >
+                    <Row gutter={[16, 8]} style={{ margin: 0 }}>
+                      <Col flex="auto">
+                        <Text strong>Credit Limit:</Text>
+                        <span style={{ marginLeft: 8 }} />
+                        <Text>${selectedAccount.credit_limit?.toLocaleString()}</Text>
+                      </Col>
+                      <Col flex="auto">
+                        <Text strong>Statement Close Day:</Text>
+                        <span style={{ marginLeft: 8 }} />
+                        <Text>{selectedAccount.close_day}</Text>
+                      </Col>
+                      <Col flex="auto">
+                        <Text strong>Payment Due Day:</Text>
+                        <span style={{ marginLeft: 8 }} />
+                        <Text>{selectedAccount.due_day}</Text>
+                      </Col>
+                    </Row>
+                  </Card>
+                )}
+                
+                {/* New Account Classifications Component */}
+                <AccountClassifications selectedAccount={selectedAccount}/>
+              </Space>
+            </div>
           </Col>
         )}
       </Row>

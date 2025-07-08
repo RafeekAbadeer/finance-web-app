@@ -199,7 +199,18 @@ export const apiService = {
   },
 
   deleteCategory: async (categoryId: number): Promise<void> => {
-    await api.delete(`/api/categories/${categoryId}`);
+    try {
+      console.log('apiService: About to call DELETE', categoryId);
+      const response = await api.delete(`/api/categories/${categoryId}`);
+      console.log('apiService: Delete successful', response);
+    } catch (err) {
+      const error = err as any;
+      console.log('apiService: Error caught:', error);
+      console.log('apiService: Error response:', error.response);
+      console.log('apiService: Error status:', error.response?.status);
+      console.log('apiService: Error data:', error.response?.data);
+      throw error; // Re-throw to let the component handle it
+    }
   },
 
   // Account-Classification linking

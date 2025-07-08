@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from typing import List, Dict, Any
@@ -594,22 +594,24 @@ def delete_category(category_id: int):
         # Check if category exists
         cursor.execute("SELECT id FROM cat WHERE id = ?", (category_id,))
         if not cursor.fetchone():
-            return {"error": "Category not found"}
+            raise HTTPException(status_code=404, detail="Category not found")
         
         # Check if category is used by any accounts
         cursor.execute("SELECT COUNT(*) FROM accounts WHERE cat_id = ?", (category_id,))
         accounts_count = cursor.fetchone()[0]
         
         if accounts_count > 0:
-            return {"error": f"Cannot delete category. It is used by {accounts_count} account(s)"}
+            raise HTTPException(status_code=400, detail=f"Cannot delete category. It is used by {accounts_count} account(s)")
         
         cursor.execute("DELETE FROM cat WHERE id = ?", (category_id,))
         
         conn.commit()
         conn.close()
         return {"message": "Category deleted successfully"}
+    except HTTPException:
+        raise  # Re-raise HTTPException
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Enhanced Currencies endpoint
 @app.get("/api/currencies/detailed")

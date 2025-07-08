@@ -1,15 +1,20 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import 'antd/dist/reset.css'; 
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { App as AntdApp } from 'antd'; // Import Ant Design's App component
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <AntdApp> {/* Wrap your application with Ant Design's App component */}
+      <App />
+    </AntdApp>
+
   </React.StrictMode>
 );
 

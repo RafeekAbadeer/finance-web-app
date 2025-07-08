@@ -172,35 +172,6 @@ const AccountClassifications: React.FC<AccountClassificationsProps> = ({ selecte
         </div>
       } 
       size="small"
-      extra={
-        availableClassifications.length > 0 && (
-          <Space>
-            <Select
-              style={{ width: 200 }}
-              placeholder="Select classification"
-              value={selectedClassificationId}
-              onChange={setSelectedClassificationId}
-              size="small"
-            >
-              {availableClassifications.map(classification => (
-                <Option key={classification.id} value={classification.id}>
-                  {classification.name}
-                </Option>
-              ))}
-            </Select>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              //size="small"
-              onClick={handleAddClassification}
-              disabled={!selectedClassificationId}
-              loading={addingClassification}
-            >
-              Add
-            </Button>
-          </Space>
-        )
-      }
     >
       {classifications.length === 0 ? (
         <Alert
@@ -237,7 +208,47 @@ const AccountClassifications: React.FC<AccountClassificationsProps> = ({ selecte
           </div>
         </div>
       )}
-
+      {availableClassifications.length > 0 && (
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #f0f0f0' }}>
+          <Text strong style={{ display: 'block', marginBottom: 8 }}>Add Classification:</Text>
+          <Space>
+            <div style={{ 
+              display: 'flex', 
+              flexWrap: 'wrap', 
+              gap: 8, 
+              alignItems: 'center' 
+            }}>
+              <Select
+                placeholder="Select classification"
+                value={selectedClassificationId}
+                onChange={setSelectedClassificationId}
+                size="small"
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
+                }
+                style={{ flex: '1 1 auto' }}
+              >
+                {availableClassifications.map(classification => (
+                  <Option key={classification.id} value={classification.id}>
+                    {classification.name}
+                  </Option>
+                ))}
+              </Select>
+              <Button
+                type="link"
+                icon={<PlusOutlined />}
+                size="small"
+                onClick={handleAddClassification}
+                disabled={!selectedClassificationId}
+                loading={addingClassification}
+                title="Add Classification"
+              />
+            </div>
+          </Space>
+        </div>
+      )}
       {availableClassifications.length === 0 && allClassifications.length > 0 && (
         <Alert
           message="All Classifications Assigned"
