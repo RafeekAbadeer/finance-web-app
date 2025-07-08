@@ -71,22 +71,22 @@ const CategoriesTable: React.FC = () => {
 
     const handleDelete = async (id: number) => {
         // Test if message works at all
-        message.error('Test error message');
-        message.success('Test success message');
+        //message.error('Test error message');
+        //message.success('Test success message');
         
         try {
-            console.log('Attempting to delete category:', id);
+            //console.log('Attempting to delete category:', id);
             await apiService.deleteCategory(id);
-            console.log('Delete API call completed without throwing error');
+            //console.log('Delete API call completed without throwing error');
             message.success('Category deleted successfully');
             fetchCategories();
         } catch (error: any) {
-            console.log('Full error object:', error);
-            console.log('Error response:', error.response);
-            console.log('Error response data:', error.response?.data);
+            //console.log('Full error object:', error);
+            //console.log('Error response:', error.response);
+            //console.log('Error response data:', error.response?.data);
             
             const errorMsg = error.response?.data?.detail || error.response?.data?.error || error.message || 'Failed to delete category';
-            console.log('Showing error message:', errorMsg);
+            //console.log('Showing error message:', errorMsg);
             message.error(errorMsg);
         }
     };
@@ -244,7 +244,7 @@ const CategoriesTable: React.FC = () => {
             open={modalVisible}
             onOk={() => form.submit()}
             onCancel={() => setModalVisible(false)}
-            destroyOnClose
+            destroyOnHidden
             width={400}
         >
             <Form form={form} onFinish={handleSubmit} layout="vertical">
