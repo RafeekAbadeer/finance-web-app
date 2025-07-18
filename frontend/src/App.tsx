@@ -10,6 +10,7 @@ import AccountsTable from './components/AccountsTable';
 import CategoriesTable from './components/CategoriesTable';
 import CurrenciesTable from './components/CurrenciesTable';
 import ClassificationsTable from './components/ClassificationsTable';
+import Dashboard from './components/Dashboard';
 import './App.css';
 
 
@@ -87,6 +88,8 @@ function App() {
   const renderContent = () => {
     switch (selectedKey) {
       case 'dashboard':
+        return <Dashboard />;
+        /*
         return (
           <div style={{padding: '0 24px'}}>
             <Title level={2}>Dashboard</Title>
@@ -105,6 +108,7 @@ function App() {
             </Button>
           </div>
         );
+        */
       case 'transactions':
         return <TransactionMasterDetail />;
       case 'accounts':

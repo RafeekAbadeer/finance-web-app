@@ -152,6 +152,23 @@ export interface DashboardData {
   creditCardDues: CreditCardDue[];
 }
 
+// Chart data interfaces
+export interface MonthlyTrend {
+	month: string;
+	income: number;
+	expenses: number;
+	net_income: number;
+	net_assets: number;
+}
+
+export interface YearlyTrend {
+	year: string;
+	income: number;
+	expenses: number;
+	net_income: number;
+	net_assets: number;
+}
+
 export const apiService = {
   // Get all transactions
   getTransactions: async (): Promise<Transaction[]> => {
@@ -326,5 +343,14 @@ export const apiService = {
     const response = await api.get('/api/credit-card-dues');
     return response.data.dues;
   },
+  getMonthlyTrends: async (months: number = 12): Promise<MonthlyTrend[]> => {
+		const response = await api.get(`/api/dashboard/monthly-trends?months=${months}`);
+		return response.data.monthly_trends;
+	},
+
+	getYearlyTrends: async (years: number = 5): Promise<YearlyTrend[]> => {
+		const response = await api.get(`/api/dashboard/yearly-trends?years=${years}`);
+		return response.data.yearly_trends;
+	},
 
 };

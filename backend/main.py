@@ -1115,3 +1115,91 @@ def get_credit_card_dues():
         return {"dues": dashboard_data["creditCardDues"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/dashboard/monthly-trends")
+def get_monthly_trends(months: int = 12):
+	"""Get monthly financial trends for the last N months"""
+	try:
+		conn = get_db_connection()
+		cursor = conn.cursor()
+		
+		# Get monthly income/expense data
+		cursor.execute("""
+			SELECT 
+				strftime('%Y-%m', tl.date) as month,
+				COALESCE(SUM(CASE WHEN c.name LIKE '%income%' OR c.name LIKE '%revenue%' THEN tl.credit END), 0) as income,
+				COALESCE(SUM(CASE WHEN c.name LIKE '%expense%' OR c.name LIKE '%cost%' THEN tl.debit END), 0) as expenses,
+				COALESCE(SUM(CASE WHEN c.name LIKE '%asset%' OR c.name LIKE '%cash%' OR c.name LIKE '%bank%' THEN tl.debit - tl.credit END), 0) as net_assets
+			FROM transaction_lines tl
+			JOIN accounts a ON tl.account_id = a.id
+			JOIN cat c ON a.cat_id = c.id
+			WHERE tl.date >= date('now', '-{} months')
+			GROUP BY strftime('%Y-%m', tl.date)
+			ORDER BY month
+		""".format(months))
+		
+		monthly_data = []
+		for row in cursor.fetchall():
+			month = row[0]
+			income = float(row[1]) if row[1] else 0.0
+			expenses = float(row[2]) if row[2] else 0.0
+			net_assets = float(row[3]) if row[3] else 0.0
+			net_income = income - expenses
+			
+			monthly_data.append({
+				"month": month,
+				"income": income,
+				"expenses": expenses,
+				"net_income": net_income,
+				"net_assets": net_assets
+			})
+		
+		conn.close()
+		return {"monthly_trends": monthly_data}
+		
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/dashboard/yearly-trends")
+def get_yearly_trends(years: int = 5):
+	"""Get yearly financial trends for the last N years"""
+	try:
+		conn = get_db_connection()
+		cursor = conn.cursor()
+		
+		# Get yearly income/expense data
+		cursor.execute("""
+			SELECT 
+				strftime('%Y', tl.date) as year,
+				COALESCE(SUM(CASE WHEN c.name LIKE '%income%' OR c.name LIKE '%revenue%' THEN tl.credit END), 0) as income,
+				COALESCE(SUM(CASE WHEN c.name LIKE '%expense%' OR c.name LIKE '%cost%' THEN tl.debit END), 0) as expenses,
+				COALESCE(SUM(CASE WHEN c.name LIKE '%asset%' OR c.name LIKE '%cash%' OR c.name LIKE '%bank%' THEN tl.debit - tl.credit END), 0) as net_assets
+			FROM transaction_lines tl
+			JOIN accounts a ON tl.account_id = a.id
+			JOIN cat c ON a.cat_id = c.id
+			WHERE tl.date >= date('now', '-{} years')
+			GROUP BY strftime('%Y', tl.date)
+			ORDER BY year
+		""".format(years))
+		
+		yearly_data = []
+		for row in cursor.fetchall():
+			year = row[0]
+			income = float(row[1]) if row[1] else 0.0
+			expenses = float(row[2]) if row[2] else 0.0
+			net_assets = float(row[3]) if row[3] else 0.0
+			net_income = income - expenses
+			
+			yearly_data.append({
+				"year": year,
+				"income": income,
+				"expenses": expenses,
+				"net_income": net_income,
+				"net_assets": net_assets
+			})
+		
+		conn.close()
+		return {"yearly_trends": yearly_data}
+		
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e))
