@@ -1,13 +1,15 @@
 import React from 'react';
 import { Layout, Menu, Typography, message, Button, Modal } from 'antd';
 import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined, TagsOutlined, 
-  DollarOutlined, AppstoreOutlined, FolderOutlined, TagOutlined, UnorderedListOutlined 
+  DollarOutlined, ApartmentOutlined, AppstoreOutlined, FolderOutlined, TagOutlined, 
+  UnorderedListOutlined, DatabaseOutlined
 } from '@ant-design/icons';
 import TransactionTable from './components/TransactionTable';
 import TransactionMasterDetail from './components/TransactionTable';
 import AccountsTable from './components/AccountsTable';
 import CategoriesTable from './components/CategoriesTable';
 import CurrenciesTable from './components/CurrenciesTable';
+import ClassificationsTable from './components/ClassificationsTable';
 import './App.css';
 
 
@@ -32,15 +34,15 @@ function App() {
       label: 'Transactions',
     },
     {
-      key: 'accounts',
-      icon: <BankOutlined />,
-      label: 'Accounts',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'Settings',
+      key: 'master-data',
+      icon: <DatabaseOutlined />,
+      label: 'Master Data',
       children: [
+        {
+          key: 'accounts',
+          icon: <BankOutlined />,
+          label: 'Accounts',
+        },
         {
           key: 'categories',
           icon: <TagsOutlined  />,
@@ -50,6 +52,11 @@ function App() {
           key: 'currencies',
           icon: <DollarOutlined />, 
           label: 'Currencies',
+        },
+        {
+          key: 'classifications',
+          icon: <UnorderedListOutlined />, 
+          label: 'Classifications',
         }
       ]
     },
@@ -106,8 +113,8 @@ function App() {
         return <CategoriesTable />;
       case 'currencies':
         return <CurrenciesTable />;
-      case 'settings':
-        return <Title level={2} style={{padding: '0 24px'}}>Settings - Coming Soon!</Title>;
+      case 'classifications':
+        return <ClassificationsTable />;
       default:
         return <Title level={2}>Dashboard</Title>;
     }
@@ -123,7 +130,7 @@ function App() {
         </Header>
         <Layout style={{ flex: 1, display: 'flex', height: 'calc(100vh - 64px)', padding: '76px 0px 0px 0px' }}>
             <Sider
-              width={200}
+              width={220}
               theme='light'
               style={{
                 background: 'transparent', // You can change this to '#fff' or any color you prefer

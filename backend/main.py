@@ -903,3 +903,215 @@ def unlink_account_classification(account_id: int, classification_id: int):
         return {"message": "Classification unlinked successfully"}
     except Exception as e:
         return {"error": str(e)}
+    
+
+@app.get("/api/dashboard")
+def get_dashboard_data():
+    """Get comprehensive dashboard data"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get account balances
+        cursor.execute("""
+            SELECT 
+                a.id, a.name, c.name as category, 
+                COALESCE(SUM(tl.debit), 0) - COALESCE(SUM(tl.credit), 0) as balance,
+                cu.name as currency, a.nature, a.term,
+                CASE WHEN cc.account_id IS NOT NULL THEN 1 ELSE 0 END as is_credit_card,
+                cc.credit_limit, cc.due_day, cc.close_day
+            FROM accounts a
+            JOIN cat c ON a.cat_id = c.id
+            LEFT JOIN currency cu ON a.default_currency_id = cu.id
+            LEFT JOIN transaction_lines tl ON a.id = tl.account_id
+            LEFT JOIN ccards cc ON a.id = cc.account_id
+            GROUP BY a.id, a.name, c.name, cu.name, a.nature, a.term, cc.credit_limit, cc.due_day, cc.close_day
+            ORDER BY c.name, a.name
+        """)
+        
+        account_balances = []
+        total_assets = 0
+        total_liabilities = 0
+        total_equity = 0
+        
+        for row in cursor.fetchall():
+            balance = float(row[3]) if row[3] else 0.0
+            account_balance = {
+                "id": row[0],
+                "name": row[1],
+                "category": row[2],
+                "balance": balance,
+                "currency": row[4] or "USD",
+                "nature": row[5] or "both",
+                "term": row[6] or "undefined",
+                "is_credit_card": bool(row[7]),
+                "credit_limit": float(row[8]) if row[8] else None,
+                "due_day": row[9],
+                "close_day": row[10]
+            }
+            account_balances.append(account_balance)
+            
+            # Calculate totals based on account nature and balance
+            category = row[2].lower()
+            if 'asset' in category or 'cash' in category or 'bank' in category:
+                total_assets += balance
+            elif 'liability' in category or 'payable' in category or 'loan' in category:
+                total_liabilities += abs(balance)  # Liabilities are typically negative
+            elif 'equity' in category or 'capital' in category:
+                total_equity += balance
+        
+        # Get transaction counts
+        cursor.execute("SELECT COUNT(*) FROM transactions")
+        transaction_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM accounts")
+        account_count = cursor.fetchone()[0]
+        
+        # Get income/expense totals (simplified - you may want to refine this)
+        cursor.execute("""
+            SELECT 
+                COALESCE(SUM(CASE WHEN c.name LIKE '%income%' OR c.name LIKE '%revenue%' THEN tl.credit END), 0) as total_income,
+                COALESCE(SUM(CASE WHEN c.name LIKE '%expense%' OR c.name LIKE '%cost%' THEN tl.debit END), 0) as total_expenses
+            FROM transaction_lines tl
+            JOIN accounts a ON tl.account_id = a.id
+            JOIN cat c ON a.cat_id = c.id
+        """)
+        
+        income_expense = cursor.fetchone()
+        total_income = float(income_expense[0]) if income_expense[0] else 0.0
+        total_expenses = float(income_expense[1]) if income_expense[1] else 0.0
+        
+        # Get recent transactions (last 5)
+        cursor.execute("""
+            SELECT 
+                t.id, t.description, cu.name as currency_name,
+                MIN(tl.date) as date,
+                SUM(COALESCE(tl.debit, 0)) as total_debit,
+                SUM(COALESCE(tl.credit, 0)) as total_credit,
+                COUNT(tl.id) as line_count,
+                GROUP_CONCAT(DISTINCT a.name) as accounts
+            FROM transactions t
+            JOIN transaction_lines tl ON t.id = tl.transaction_id
+            LEFT JOIN currency cu ON t.currency_id = cu.id
+            LEFT JOIN accounts a ON tl.account_id = a.id
+            GROUP BY t.id, t.description, cu.name
+            ORDER BY date DESC
+            LIMIT 5
+        """)
+        
+        recent_transactions = []
+        for row in cursor.fetchall():
+            total_debit = float(row[4]) if row[4] else 0.0
+            total_credit = float(row[5]) if row[5] else 0.0
+            display_amount = total_debit if total_debit > 0 else total_credit
+            
+            recent_transactions.append({
+                "id": row[0],
+                "description": row[1],
+                "currency_name": row[2] or "USD",
+                "date": row[3],
+                "amount": display_amount,
+                "accounts": row[7] or "Unknown",
+                "total_debit": total_debit,
+                "total_credit": total_credit,
+                "line_count": row[6]
+            })
+        
+        # Get credit card dues
+        cursor.execute("""
+            SELECT 
+                cc.id, a.name as account_name,
+                COALESCE(SUM(tl.credit), 0) - COALESCE(SUM(tl.debit), 0) as current_balance,
+                cc.credit_limit, cc.due_day, cc.close_day
+            FROM ccards cc
+            JOIN accounts a ON cc.account_id = a.id
+            LEFT JOIN transaction_lines tl ON a.id = tl.account_id
+            GROUP BY cc.id, a.name, cc.credit_limit, cc.due_day, cc.close_day
+        """)
+        
+        credit_card_dues = []
+        for row in cursor.fetchall():
+            current_balance = float(row[2]) if row[2] else 0.0
+            credit_limit = float(row[3]) if row[3] else 0.0
+            due_day = row[4]
+            
+            # Calculate next due date
+            from datetime import datetime, timedelta
+            today = datetime.now()
+            if due_day:
+                try:
+                    # Find next due date
+                    next_due = datetime(today.year, today.month, due_day)
+                    if next_due <= today:
+                        # Move to next month
+                        if today.month == 12:
+                            next_due = datetime(today.year + 1, 1, due_day)
+                        else:
+                            next_due = datetime(today.year, today.month + 1, due_day)
+                    
+                    days_until_due = (next_due - today).days
+                    due_date = next_due.strftime('%Y-%m-%d')
+                except:
+                    days_until_due = 0
+                    due_date = today.strftime('%Y-%m-%d')
+            else:
+                days_until_due = 0
+                due_date = today.strftime('%Y-%m-%d')
+            
+            utilization = (current_balance / credit_limit * 100) if credit_limit > 0 else 0
+            
+            credit_card_dues.append({
+                "id": row[0],
+                "account_name": row[1],
+                "current_balance": current_balance,
+                "credit_limit": credit_limit,
+                "due_date": due_date,
+                "days_until_due": days_until_due,
+                "utilization_percentage": round(utilization, 2)
+            })
+        
+        # Create summary
+        net_worth = total_assets - total_liabilities
+        net_income = total_income - total_expenses
+        
+        summary = {
+            "totalAssets": total_assets,
+            "totalLiabilities": total_liabilities,
+            "totalEquity": total_equity,
+            "netWorth": net_worth,
+            "totalIncome": total_income,
+            "totalExpenses": total_expenses,
+            "netIncome": net_income,
+            "transactionCount": transaction_count,
+            "accountCount": account_count
+        }
+        
+        conn.close()
+        
+        return {
+            "summary": summary,
+            "accountBalances": account_balances,
+            "recentTransactions": recent_transactions,
+            "creditCardDues": credit_card_dues
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/account-balances")
+def get_account_balances():
+    """Get account balances only"""
+    try:
+        dashboard_data = get_dashboard_data()
+        return {"balances": dashboard_data["accountBalances"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/credit-card-dues")
+def get_credit_card_dues():
+    """Get credit card dues only"""
+    try:
+        dashboard_data = get_dashboard_data()
+        return {"dues": dashboard_data["creditCardDues"]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

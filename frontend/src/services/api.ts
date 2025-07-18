@@ -108,6 +108,50 @@ export interface Classification {
   name: string;
 }
 
+// Dashboard interfaces
+export interface AccountBalance {
+  id: number;
+  name: string;
+  category: string;
+  balance: number;
+  currency: string;
+  nature: string;
+  term: string;
+  is_credit_card: boolean;
+  credit_limit?: number;
+  due_day?: number;
+  close_day?: number;
+}
+
+export interface FinancialSummary {
+  totalAssets: number;
+  totalLiabilities: number;
+  totalEquity: number;
+  netWorth: number;
+  totalIncome: number;
+  totalExpenses: number;
+  netIncome: number;
+  transactionCount: number;
+  accountCount: number;
+}
+
+export interface CreditCardDue {
+  id: number;
+  account_name: string;
+  current_balance: number;
+  credit_limit: number;
+  due_date: string;
+  days_until_due: number;
+  utilization_percentage: number;
+}
+
+export interface DashboardData {
+  summary: FinancialSummary;
+  accountBalances: AccountBalance[];
+  recentTransactions: Transaction[];
+  creditCardDues: CreditCardDue[];
+}
+
 export const apiService = {
   // Get all transactions
   getTransactions: async (): Promise<Transaction[]> => {
@@ -265,6 +309,22 @@ export const apiService = {
 
   deleteClassification: async (classificationId: number): Promise<void> => {
     await api.delete(`/api/classifications/${classificationId}`);
+  },
+
+  // Dashboard API functions
+  getDashboardData: async (): Promise<DashboardData> => {
+    const response = await api.get('/api/dashboard');
+    return response.data;
+  },
+
+  getAccountBalances: async (): Promise<AccountBalance[]> => {
+    const response = await api.get('/api/account-balances');
+    return response.data.balances;
+  },
+
+  getCreditCardDues: async (): Promise<CreditCardDue[]> => {
+    const response = await api.get('/api/credit-card-dues');
+    return response.data.dues;
   },
 
 };
