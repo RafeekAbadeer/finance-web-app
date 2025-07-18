@@ -169,8 +169,9 @@ const AccountsTable: React.FC = () => {
       if (selectedAccount?.id === id) {
         setSelectedAccount(null);
       }
-    } catch (error) {
-      message.error('Failed to delete account');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || error.response?.data?.error || error.message || 'Failed to delete account';
+      message.error(errorMsg);
       console.error(error);
     }
   };

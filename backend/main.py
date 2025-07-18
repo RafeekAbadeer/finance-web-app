@@ -222,6 +222,11 @@ def delete_transaction(transaction_id: int):
         conn = get_db_connection()
         cursor = conn.cursor()
         
+        # Check if transaction exists
+        cursor.execute("SELECT id FROM transactions WHERE id = ?", (transaction_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Transaction not found")
+        
         # Delete transaction lines first (foreign key constraint)
         cursor.execute("DELETE FROM transaction_lines WHERE transaction_id = ?", (transaction_id,))
         
@@ -231,8 +236,10 @@ def delete_transaction(transaction_id: int):
         conn.commit()
         conn.close()
         return {"message": "Transaction deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/currencies")
 def get_currencies():
@@ -509,7 +516,7 @@ def delete_account(account_id: int):
         has_transactions = cursor.fetchone()[0] > 0
         
         if has_transactions:
-            return {"error": "Cannot delete account with existing transactions"}
+            raise HTTPException(status_code=400, detail="Cannot delete account with existing transactions")
         
         # Delete credit card record if exists
         cursor.execute("DELETE FROM ccards WHERE account_id = ?", (account_id,))
@@ -523,8 +530,10 @@ def delete_account(account_id: int):
         conn.commit()
         conn.close()
         return {"message": "Account deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Category CRUD endpoints
@@ -691,7 +700,7 @@ def delete_currency(currency_id: int):
         # Check if currency exists
         cursor.execute("SELECT id FROM currency WHERE id = ?", (currency_id,))
         if not cursor.fetchone():
-            return {"error": "Currency not found"}
+            raise HTTPException(status_code=404, detail="Currency not found")
         
         # Check if currency is used by any accounts or transactions
         cursor.execute("SELECT COUNT(*) FROM accounts WHERE default_currency_id = ?", (currency_id,))
@@ -701,15 +710,17 @@ def delete_currency(currency_id: int):
         transactions_count = cursor.fetchone()[0]
         
         if accounts_count > 0 or transactions_count > 0:
-            return {"error": f"Cannot delete currency. It is used by {accounts_count} account(s) and {transactions_count} transaction(s)"}
+            raise HTTPException(status_code=400, detail=f"Cannot delete currency. It is used by {accounts_count} account(s) and {transactions_count} transaction(s)")
         
         cursor.execute("DELETE FROM currency WHERE id = ?", (currency_id,))
         
         conn.commit()
         conn.close()
         return {"message": "Currency deleted successfully"}
+    except HTTPException:
+        raise  # Re-raise HTTPException to let FastAPI handle it properly
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
     
 # Enhanced Classifications endpoint
 @app.get("/api/classifications/detailed")
@@ -779,7 +790,7 @@ def delete_classification(classification_id: int):
         # Check if classification exists
         cursor.execute("SELECT id FROM classifications WHERE id = ?", (classification_id,))
         if not cursor.fetchone():
-            return {"error": "Classification not found"}
+            raise HTTPException(status_code=404, detail="Classification not found")
         
         # Check if classification is used by any transaction lines or account classifications
         cursor.execute("SELECT COUNT(*) FROM transaction_lines WHERE classification_id = ?", (classification_id,))
@@ -789,15 +800,17 @@ def delete_classification(classification_id: int):
         account_links_count = cursor.fetchone()[0]
         
         if transaction_lines_count > 0 or account_links_count > 0:
-            return {"error": f"Cannot delete classification. It is used by {transaction_lines_count} transaction line(s) and linked to {account_links_count} account(s)"}
+            raise HTTPException(status_code=400, detail=f"Cannot delete classification. It is used by {transaction_lines_count} transaction line(s) and linked to {account_links_count} account(s)")
         
         cursor.execute("DELETE FROM classifications WHERE id = ?", (classification_id,))
         
         conn.commit()
         conn.close()
         return {"message": "Classification deleted successfully"}
+    except HTTPException:
+        raise
     except Exception as e:
-        return {"error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Account-Classification linking endpoints
 @app.get("/api/accounts/{account_id}/classifications")

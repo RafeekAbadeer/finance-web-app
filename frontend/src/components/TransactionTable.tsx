@@ -70,7 +70,7 @@ const TransactionMasterDetail: React.FC = () => {
         total: data.total,
       });
       
-      message.success(`Loaded ${data.transactions.length} transactions`);
+      //message.success(`Loaded ${data.transactions.length} transactions`);
     } catch (error) {
       message.error('Failed to load transactions');
       console.error('Error loading transactions:', error);
@@ -400,6 +400,7 @@ const TransactionMasterDetail: React.FC = () => {
 
   const handleAdd = () => {
     form.resetFields();
+    form.setFieldsValue({ default_date: dayjs() }); // Set today's date 
     setFormValues({});
     setLinesGenerated(false);
     setEditingTransaction(null); // Clear editing state
@@ -569,7 +570,25 @@ const TransactionMasterDetail: React.FC = () => {
   };
 
   const [formValues, setFormValues] = useState<any>({});
-
+  /*
+  useEffect(() => {
+    if (linesGenerated && formValues.lines?.length >= 2) {
+      const balance = calculateBalance(formValues.lines);
+      if (balance.isBalanced) {
+        // Only auto-focus Save button if both accounts are selected (user has made progress)
+        const firstAccount = formValues.lines[0]?.account_id;
+        const secondAccount = formValues.lines[1]?.account_id;
+        // Focus Save button when transaction is complete and balanced
+        setTimeout(() => {
+          const saveBtn = document.getElementById('save-transaction-btn');
+          if (saveBtn) {
+            saveBtn.focus();
+          }
+        }, 100);
+      }
+    }
+  }, [formValues.lines, linesGenerated]);
+  */
   // Helper function to calculate balance
   const calculateBalance = (lines: any[] = []) => {
     const totalDebit = lines.reduce((sum, line) => sum + (line?.debit || 0), 0);
@@ -734,6 +753,20 @@ const TransactionMasterDetail: React.FC = () => {
           width={1000}
           okText="Save Transaction"
           cancelText="Cancel"
+          okButtonProps={{ 
+            id: 'save-transaction-btn' // Add ID for focusing
+          }}
+          afterOpenChange={(open) => {
+            if (open) {
+              // Focus description field when modal opens
+              setTimeout(() => {
+                const descriptionInput = document.querySelector('[data-testid="description-input"]') as HTMLInputElement;
+                if (descriptionInput) {
+                  descriptionInput.focus();
+                }
+              }, 100);
+            }
+          }}
         >
           <Form form={form} layout="vertical" onValuesChange={handleFormChange}>
             {/* Stage 1: Transaction Setup */}
@@ -746,7 +779,10 @@ const TransactionMasterDetail: React.FC = () => {
                   rules={[{ required: true, message: 'Please enter description' }]}
                   style={{ flex: 2 }}
                 >
-                  <Input placeholder="Transaction description" />
+                  <Input
+                    placeholder="Transaction description"
+                    data-testid="description-input"
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -755,7 +791,25 @@ const TransactionMasterDetail: React.FC = () => {
                   rules={[{ required: true, message: 'Please select date' }]}
                   style={{ flex: 1 }}
                 >
-                  <DatePicker style={{ width: '100%' }} />
+                  <DatePicker 
+                    style={{ width: '100%' }} 
+                    format="YYYY-MM-DD"
+                    placeholder="Select date or type YYYY-MM-DD"
+                    allowClear={false}
+                    defaultValue={dayjs()} // Keep today's default
+                    onKeyDown={(e) => {
+                      if (e.key === 'Tab') {
+                        return;
+                      }
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const amountInput = document.querySelector('[data-testid="amount-input"]') as HTMLInputElement;
+                        if (amountInput) {
+                          amountInput.focus();
+                        }
+                      }
+                    }}
+                  />
                 </Form.Item>
 
                 <Form.Item
@@ -812,7 +866,12 @@ const TransactionMasterDetail: React.FC = () => {
                     
                     setTimeout(() => {
                       setFormValues(form.getFieldsValue());
-                    }, 50);
+                      // Focus first account field after lines are generated
+                      const firstAccountField = document.querySelector('[data-testid="account-0"] .ant-select-selector') as HTMLElement;
+                      if (firstAccountField) {
+                        firstAccountField.focus();
+                      }
+                    }, 150); // Delay to ensure it overrides the useEffect
                   } else {
                     message.warning('Please fill all required fields first (Description, Date, Amount, Currency)');
                   }
@@ -860,7 +919,7 @@ const TransactionMasterDetail: React.FC = () => {
                 <Form.List name="lines">
                   {(fields, { add, remove }) => (
                     <>
-                      {fields.map(({ key, name, ...restField }) => (
+                      {fields.map(({ key, name, ...restField }, index) => (
                         <div key={key} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'end' }}>
                           <Form.Item
                             {...restField}
@@ -876,6 +935,7 @@ const TransactionMasterDetail: React.FC = () => {
                               filterOption={(input, option) =>
                                 (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
                               }
+                              data-testid={`account-${index}`}
                               onChange={(value) => {
                                 // Clear classification when account changes
                                 form.setFieldValue(['lines', name, 'classification_id'], undefined);
@@ -883,6 +943,12 @@ const TransactionMasterDetail: React.FC = () => {
                                 if (value) {
                                   loadAccountClassifications(value);
                                 }
+                                setTimeout(() => {
+                                  const classificationField = document.querySelector(`[data-testid="classification-${index}"] .ant-select-selector`) as HTMLElement;
+                                  if (classificationField) {
+                                    classificationField.focus();
+                                  }
+                                }, 100);
                               }}
                             >
                               {Object.entries(
@@ -917,6 +983,7 @@ const TransactionMasterDetail: React.FC = () => {
                                 borderColor: '#ffccc7',
                                 backgroundColor: '#fff2f0'
                               }}
+                              tabIndex={-1}
                               onChange={(value) => {
                                 if (value && Number(value) > 0) {
                                   form.setFieldValue(['lines', name, 'credit'], undefined);
@@ -938,6 +1005,7 @@ const TransactionMasterDetail: React.FC = () => {
                                 borderColor: '#b7eb8f',
                                 backgroundColor: '#f6ffed'
                               }}
+                              tabIndex={-1} // Prevent tabbing into this field
                               onChange={(value) => {
                                 if (value && Number(value) > 0) {
                                   form.setFieldValue(['lines', name, 'debit'], undefined);
@@ -952,7 +1020,10 @@ const TransactionMasterDetail: React.FC = () => {
                             label="Date"
                             style={{ flex: 1 }}
                           >
-                            <DatePicker style={{ width: '100%' }} />
+                            <DatePicker
+                              style={{ width: '100%' }}
+                              tabIndex={-1} // Prevent tabbing into this field
+                            />
                           </Form.Item>
 
                           <Form.Item
@@ -970,6 +1041,25 @@ const TransactionMasterDetail: React.FC = () => {
                                 (option?.children?.toString() || '').toLowerCase().includes(input.toLowerCase())
                               }
                               disabled={!form.getFieldValue(['lines', name, 'account_id'])}
+                              data-testid={`classification-${index}`}
+                              onChange={(value) => {
+                                // Auto-focus next logical field after classification selection
+                                setTimeout(() => {
+                                  if (index === 0) {
+                                    // From first line, go to second line account
+                                    const nextAccountField = document.querySelector(`[data-testid="account-1"] .ant-select-selector`) as HTMLElement;
+                                    if (nextAccountField) {
+                                      nextAccountField.focus();
+                                    }
+                                  } else if (index === 1) {
+                                    // From second line, go to Save button
+                                    const saveBtn = document.getElementById('save-transaction-btn');
+                                    if (saveBtn) {
+                                      saveBtn.focus();
+                                    }
+                                  }
+                                }, 100);
+                              }}
                               onFocus={() => {
                                 // Clear classification if account changed
                                 const selectedAccountId = form.getFieldValue(['lines', name, 'account_id']);

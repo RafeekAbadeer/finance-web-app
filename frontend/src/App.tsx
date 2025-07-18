@@ -1,10 +1,13 @@
 import React from 'react';
 import { Layout, Menu, Typography, message, Button, Modal } from 'antd';
-import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined, TagsOutlined, AppstoreOutlined, FolderOutlined, TagOutlined, UnorderedListOutlined } from '@ant-design/icons';
+import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined, TagsOutlined, 
+  DollarOutlined, AppstoreOutlined, FolderOutlined, TagOutlined, UnorderedListOutlined 
+} from '@ant-design/icons';
 import TransactionTable from './components/TransactionTable';
 import TransactionMasterDetail from './components/TransactionTable';
 import AccountsTable from './components/AccountsTable';
 import CategoriesTable from './components/CategoriesTable';
+import CurrenciesTable from './components/CurrenciesTable';
 import './App.css';
 
 
@@ -43,6 +46,11 @@ function App() {
           icon: <TagsOutlined  />,
           label: 'Categories',
         },
+        {
+          key: 'currencies',
+          icon: <DollarOutlined />, 
+          label: 'Currencies',
+        }
       ]
     },
   ];
@@ -96,6 +104,8 @@ function App() {
         return <AccountsTable />;
       case 'categories':
         return <CategoriesTable />;
+      case 'currencies':
+        return <CurrenciesTable />;
       case 'settings':
         return <Title level={2} style={{padding: '0 24px'}}>Settings - Coming Soon!</Title>;
       default:
