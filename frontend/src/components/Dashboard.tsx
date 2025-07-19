@@ -1,18 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Card, Statistic, Table, Tag, Typography, message, Progress, Select } from 'antd';
-import { 
-  DollarOutlined, 
-  BankOutlined, 
-  RiseOutlined, 
-  FallOutlined,
-  CreditCardOutlined,
-  CalendarOutlined
-} from '@ant-design/icons';
+import { DollarOutlined, BankOutlined, RiseOutlined, FallOutlined, CreditCardOutlined,
+  CalendarOutlined } from '@ant-design/icons';
 import { apiService, DashboardData, AccountBalance, CreditCardDue, Transaction, MonthlyTrend, 
-    YearlyTrend } from '../services/api';
+    YearlyTrend, MonthlyLiabilities } from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
     BarChart, Bar } from 'recharts';
+
 const { Title, Text } = Typography;
 
 const Dashboard: React.FC = () => {
@@ -23,6 +18,7 @@ const Dashboard: React.FC = () => {
     const [yearlyTrends, setYearlyTrends] = useState<YearlyTrend[]>([]);
     const [incomeExpensePeriod, setIncomeExpensePeriod] = useState<'monthly' | 'yearly'>('monthly');
     const [netWorthPeriod, setNetWorthPeriod] = useState<'monthly' | 'yearly'>('monthly');
+    const [monthlyLiabilities, setMonthlyLiabilities] = useState<MonthlyLiabilities | null>(null);
 
     useEffect(() => {
     loadDashboardData();
@@ -46,15 +42,17 @@ const Dashboard: React.FC = () => {
     const loadDashboardData = async () => {
     try {
         setLoading(true);
-        const [dashboardData, monthlyData, yearlyData] = await Promise.all([
+        const [dashboardData, monthlyData, yearlyData, liabilitiesData] = await Promise.all([
 			apiService.getDashboardData(),
 			apiService.getMonthlyTrends(12),
-			apiService.getYearlyTrends(3)
+			apiService.getYearlyTrends(3),
+            apiService.getMonthlyLiabilities()
 		]);
 		
 		setDashboardData(dashboardData);
 		setMonthlyTrends(monthlyData);
 		setYearlyTrends(yearlyData);
+        setMonthlyLiabilities(liabilitiesData);
     } catch (error) {
         message.error('Failed to load dashboard data');
         console.error('Dashboard error:', error);
@@ -298,7 +296,7 @@ const Dashboard: React.FC = () => {
             <Card size="small">
             <Statistic
                 title="This Month Liabilities"
-                value={0} // Will be implemented in backend
+                value={monthlyLiabilities?.current_month_liabilities || 0}
                 precision={2}
                 valueStyle={{ color: '#cf1322' }}
                 prefix={<CalendarOutlined />}
@@ -309,7 +307,7 @@ const Dashboard: React.FC = () => {
             <Card size="small">
             <Statistic
                 title="Next Month Liabilities"
-                value={0} // Will be implemented in backend
+                value={monthlyLiabilities?.next_month_liabilities || 0}
                 precision={2}
                 valueStyle={{ color: '#cf1322' }}
                 prefix={<CalendarOutlined />}

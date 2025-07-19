@@ -169,6 +169,15 @@ export interface YearlyTrend {
 	net_assets: number;
 }
 
+// Monthly liabilities interface
+export interface MonthlyLiabilities {
+	current_month_liabilities: number;
+	next_month_liabilities: number;
+	current_month: string;
+	next_month: string;
+}
+
+
 export const apiService = {
   // Get all transactions
   getTransactions: async (): Promise<Transaction[]> => {
@@ -351,6 +360,11 @@ export const apiService = {
 	getYearlyTrends: async (years: number = 5): Promise<YearlyTrend[]> => {
 		const response = await api.get(`/api/dashboard/yearly-trends?years=${years}`);
 		return response.data.yearly_trends;
+	},
+
+  getMonthlyLiabilities: async (): Promise<MonthlyLiabilities> => {
+		const response = await api.get('/api/dashboard/monthly-liabilities');
+		return response.data;
 	},
 
 };

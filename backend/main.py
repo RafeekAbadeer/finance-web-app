@@ -1203,3 +1203,77 @@ def get_yearly_trends(years: int = 5):
 		
 	except Exception as e:
 		raise HTTPException(status_code=500, detail=str(e))
+    
+@app.get("/api/dashboard/monthly-liabilities")
+def get_monthly_liabilities():
+	"""Get liabilities for current month and next month"""
+	try:
+		conn = get_db_connection()
+		cursor = conn.cursor()
+		
+		from datetime import datetime, timedelta
+		
+		# Get current date info
+		today = datetime.now()
+		current_year = today.year
+		current_month = today.month
+		
+		# Calculate next month
+		if current_month == 12:
+			next_month = 1
+			next_year = current_year + 1
+		else:
+			next_month = current_month + 1
+			next_year = current_year
+		
+		# Current month liabilities (including credit card dues)
+		cursor.execute("""
+			SELECT 
+				COALESCE(SUM(tl.credit - tl.debit), 0) as current_month_liabilities
+			FROM transaction_lines tl
+			JOIN accounts a ON tl.account_id = a.id
+			JOIN cat c ON a.cat_id = c.id
+			WHERE (c.name LIKE '%liability%' OR c.name LIKE '%payable%' OR c.name LIKE '%loan%')
+			AND strftime('%Y-%m', tl.date) = ?
+		""", (f"{current_year:04d}-{current_month:02d}",))
+		
+		current_month_result = cursor.fetchone()
+		current_month_liabilities = float(current_month_result[0]) if current_month_result[0] else 0.0
+		
+		# Add credit card dues for current month
+		cursor.execute("""
+			SELECT 
+				COALESCE(SUM(tl.credit - tl.debit), 0) as cc_dues
+			FROM ccards cc
+			JOIN accounts a ON cc.account_id = a.id
+			LEFT JOIN transaction_lines tl ON a.id = tl.account_id
+			WHERE strftime('%Y-%m', tl.date) = ? OR tl.date IS NULL
+		""", (f"{current_year:04d}-{current_month:02d}",))
+		
+		cc_current = cursor.fetchone()
+		current_month_cc = float(cc_current[0]) if cc_current[0] else 0.0
+		
+		# Next month projected liabilities (credit cards due dates)
+		cursor.execute("""
+			SELECT 
+				COALESCE(SUM(tl.credit - tl.debit), 0) as next_month_cc_dues
+			FROM ccards cc
+			JOIN accounts a ON cc.account_id = a.id
+			LEFT JOIN transaction_lines tl ON a.id = tl.account_id
+			WHERE cc.due_day BETWEEN 1 AND 31
+		""")
+		
+		next_month_result = cursor.fetchone()
+		next_month_liabilities = float(next_month_result[0]) if next_month_result[0] else 0.0
+		
+		conn.close()
+		
+		return {
+			"current_month_liabilities": abs(current_month_liabilities + current_month_cc),
+			"next_month_liabilities": abs(next_month_liabilities),
+			"current_month": f"{current_year}-{current_month:02d}",
+			"next_month": f"{next_year}-{next_month:02d}"
+		}
+		
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=str(e))
