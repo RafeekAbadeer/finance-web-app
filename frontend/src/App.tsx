@@ -2,7 +2,8 @@ import React from 'react';
 import { Layout, Menu, Typography, message, Button, Modal } from 'antd';
 import { DashboardOutlined, TransactionOutlined, BankOutlined, SettingOutlined, TagsOutlined, 
   DollarOutlined, ApartmentOutlined, AppstoreOutlined, FolderOutlined, TagOutlined, 
-  UnorderedListOutlined, DatabaseOutlined
+  UnorderedListOutlined, DatabaseOutlined, CheckCircleOutlined, CloseCircleOutlined, 
+  LoadingOutlined
 } from '@ant-design/icons';
 import TransactionTable from './components/TransactionTable';
 import TransactionMasterDetail from './components/TransactionTable';
@@ -11,17 +12,34 @@ import CategoriesTable from './components/CategoriesTable';
 import CurrenciesTable from './components/CurrenciesTable';
 import ClassificationsTable from './components/ClassificationsTable';
 import Dashboard from './components/Dashboard';
+import { apiService } from './services/api';
 import './App.css';
 
 
 const { Header, Sider, Content } = Layout;
-const { Title } = Typography;
+const { Title, Text } = Typography;
+
+
 
 function App() {
 
   const [selectedKey, setSelectedKey] = React.useState('dashboard');
   const [apiStatus, setApiStatus] = React.useState<string>('Testing...');
   const [transactions, setTransactions] = React.useState<any[]>([]);
+  const [backendStatus, setBackendStatus] = React.useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [appVersion] = React.useState('1.0.0');
+
+  const checkBackendStatus = async () => {
+    try {
+      setBackendStatus('checking');
+      await apiService.testConnection();
+      setBackendStatus('connected');
+    } catch (error) {
+      setBackendStatus('disconnected');
+      console.error('Backend connection failed:', error);
+    }
+  };
+
 
   const menuItems = [
     {
@@ -85,6 +103,13 @@ function App() {
     });
   }, []);
 
+  React.useEffect(() => {
+    checkBackendStatus();
+    // Check status every 30 seconds
+    const interval = setInterval(checkBackendStatus, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   const renderContent = () => {
     switch (selectedKey) {
       case 'dashboard':
@@ -127,10 +152,47 @@ function App() {
   return (
     <>
       <Layout style={{ minHeight: 'calc(100vh-64px)', /*border: '3px solid purple'*/}} /*className="main-layout"*/>
-        <Header style={{ /*padding: '0 24px',*/ /*background: 'transparent',*/background: '#001529', height: 64, /*lineHeight: '64px'*/ }}>
-          <Title level={3} style={{ color: 'lightgray', margin: 0, lineHeight: '64px' }}>
-            Finance Manager
-          </Title>
+        <Header style={{ background: '#001529', height: 64 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
+            <Title level={3} style={{ color: 'lightgray', margin: 0 }}>
+              Finance Manager
+            </Title>
+            
+            {/* Status & Version Info */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {/* Backend Status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                {backendStatus === 'connected' && (
+                  <>
+                    <CheckCircleOutlined style={{ color: '#52c41a', fontSize: '14px' }} />
+                    <Text style={{ color: 'lightgray', fontSize: '11px' }}>Online</Text>
+                  </>
+                )}
+                {backendStatus === 'disconnected' && (
+                  <>
+                    <CloseCircleOutlined style={{ color: '#ff4d4f', fontSize: '14px' }} />
+                    <Text style={{ color: '#ff4d4f', fontSize: '11px' }}>Offline</Text>
+                  </>
+                )}
+                {backendStatus === 'checking' && (
+                  <>
+                    <LoadingOutlined style={{ color: '#1890ff', fontSize: '14px' }} />
+                    <Text style={{ color: 'lightgray', fontSize: '11px' }}>Checking</Text>
+                  </>
+                )}
+              </div>
+              
+              {/* App Version */}
+              <div style={{ 
+                backgroundColor: 'rgba(255,255,255,0.1)', 
+                padding: '2px 6px', 
+                borderRadius: '3px',
+                border: '1px solid rgba(255,255,255,0.2)'
+              }}>
+                <Text style={{ color: 'lightgray', fontSize: '10px' }}>v{appVersion}</Text>
+              </div>
+            </div>
+          </div>
         </Header>
         <Layout style={{ flex: 1, display: 'flex', height: 'calc(100vh - 64px)', padding: '76px 0px 0px 0px' }}>
             <Sider
